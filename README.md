@@ -1,4 +1,4 @@
-# Duo Arena — online 2-player mini games
+# Duo Arena: 2 Player Games
 
 55 online games: Unfair Fishing, Air Hockey, Sumo Bumpers, Mini Soccer, Ping Pong, Tank Duel, Snakes, Penalty Kicks, Tug of War, Reflex Race, Tic-Tac-Toe, Connect 4, Dots & Boxes, Memory Match, Crabby Volley, Frogs Fight, Whack a Mole, Hot Potato, Bowling, Darts 301, Cannon Duel, Sea Battle, Rock Paper Scissors — and new in v0.7: Foosball, Math Tug, Guess the Place, Mini Golf, 8-Ball Pool, Kart Racing, Bomb Maze — and new in v0.8: Final Wire, Code Breaker, Pipe Race, Color Panic, Sequence Duel, What's Missing?, Shadow Match, Spot the Difference, Tower Stack, Tiny Parking — and new in v0.9: Tooth Cannon, Brush Battle, Cavity Defense, Tooth Heist, Root Rush, Magnetic Braces, Brace Wars, Build the Smile, Tooth Balance, Whose Gift?, Logic Cake, Lying Balloons, Gift Chain, Who Took the Cake?, Party Order. Every game is built to be played on a phone (touch first, portrait and landscape).
 Arabic / English UI (RTL), reconnect within 15 s, ping display, emoji reactions, bots, profile + daily missions.
