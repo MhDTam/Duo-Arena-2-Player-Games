@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Duo Arena</string>
+    <string name="title_activity_main">Duo Arena</string>
+    <string name="package_name">com.alialrikabi.duoarena</string>
+    <string name="custom_url_scheme">com.alialrikabi.duoarena</string>
+</resources>

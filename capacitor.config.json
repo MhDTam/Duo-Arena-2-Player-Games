@@ -1,0 +1,11 @@
+{
+  "appId": "com.alialrikabi.duoarena",
+  "appName": "Duo Arena",
+  "webDir": "client/dist",
+  "android": { "allowMixedContent": true },
+  "server": { "androidScheme": "https" },
+  "plugins": {
+    "SplashScreen": { "launchShowDuration": 1200, "launchAutoHide": false, "backgroundColor": "#fff4e8", "showSpinner": false },
+    "StatusBar": { "overlaysWebView": true }
+  }
+}

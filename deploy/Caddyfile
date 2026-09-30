@@ -1,0 +1,5 @@
+# Automatic HTTPS (Let's Encrypt) + WebSocket proxy → wss://DOMAIN/ws
+{$DOMAIN} {
+	encode gzip
+	reverse_proxy game:8080
+}

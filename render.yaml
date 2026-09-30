@@ -1,0 +1,16 @@
+# Render Blueprint — free web service (sleeps after 15 min idle, wakes in ~1 min)
+services:
+  - type: web
+    name: duo-arena-ali313
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: BOT_WAIT_MS
+        value: "8000"

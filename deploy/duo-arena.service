@@ -1,0 +1,16 @@
+# systemd unit (alternative to Docker). Copy to /etc/systemd/system/ and:
+#   sudo systemctl daemon-reload && sudo systemctl enable --now duo-arena
+[Unit]
+Description=Duo Arena game server
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/duo-arena
+ExecStart=/usr/bin/node server/index.js
+Environment=NODE_ENV=production PORT=8080
+Restart=always
+RestartSec=2
+User=www-data
+
+[Install]
+WantedBy=multi-user.target

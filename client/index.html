@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#fff4e8" />
+  <title>Duo Arena — Online 2-Player Mini Games</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=Baloo+Bhaijaan+2:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='36' cy='50' r='26' fill='%23ff7a2f'/><circle cx='64' cy='50' r='26' fill='%233fa7ff' fill-opacity='.9'/></svg>" />
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <div id="ui">
+    <header class="topbar">
+      <div class="brand"><span class="logo"><i></i><i></i></span><span data-i18n="brand">Duo Arena</span></div>
+      <div class="top-right">
+        <span id="netStatus" class="pill status online-only"><b></b><span>connecting…</span></span>
+        <button id="langBtn" class="icon-btn lang" title="Language">ع</button>
+        <button id="settingsBtn" class="icon-btn" title="Settings">⚙️</button>
+        <button id="profileBtn" class="pill profile-pill" title="Profile"><span id="profileAv">🙂</span><b id="coinCount">0</b>🪙</button>
+        <button id="muteBtn" class="icon-btn" title="Sound">🔊</button>
+      </div>
+    </header>
+
+    <!-- HOME -->
+    <section id="home" class="screen">
+      <div class="hero">
+        <h1 data-i18n="hero.title">Play 2-player games<br /><span>online</span> with a friend</h1>
+        <p data-i18n="hero.sub">Quick match a stranger or send your friend a room code. No sign-up.</p>
+        <label class="name-field">
+          <span data-i18n="home.name">Your name</span>
+          <input id="nameInput" maxlength="16" placeholder="Player" data-i18n-ph="home.namePh" autocomplete="off" />
+        </label>
+      </div>
+      <div class="filters" id="filters"></div>
+      <div id="gameGrid" class="grid"></div>
+      <div class="join-row card online-only">
+        <span data-i18n="home.gotCode">Got a code?</span>
+        <input id="codeInput" maxlength="4" placeholder="ABCD" autocomplete="off" />
+        <button id="joinBtn" class="btn primary" data-i18n="home.join">Join</button>
+      </div>
+    </section>
+
+    <!-- GAME SHEET -->
+    <div id="sheet" class="overlay hidden">
+      <div class="sheet card">
+        <button class="close icon-btn" data-close>✕</button>
+        <div class="sheet-thumb" id="sheetThumb"></div>
+        <h2 id="sheetTitle"></h2>
+        <p id="sheetDesc"></p>
+        <button id="quickBtn" class="btn primary big online-only" data-i18n="sheet.quick">⚡ Quick match</button>
+        <button id="createBtn" class="btn big online-only" data-i18n="sheet.friend">🔗 Play with a friend</button>
+        <div class="bot-row">
+          <button id="botBtn" class="btn big bot" data-i18n="sheet.bot">🤖 Play vs Bot</button>
+          <div class="levels" id="levels">
+            <button data-lvl="0" data-i18n="lvl.easy">Easy</button>
+            <button data-lvl="1" data-i18n="lvl.normal">Normal</button>
+            <button data-lvl="2" data-i18n="lvl.hard">Hard</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WAITING -->
+    <section id="waiting" class="overlay hidden">
+      <div class="card wait-card">
+        <div class="spinner"><i></i><i></i></div>
+        <h2 id="waitTitle"></h2>
+        <div id="waitCodeBox">
+          <p data-i18n="wait.share">Share this room code</p>
+          <div id="waitCode" class="code">----</div>
+          <div class="row">
+            <button id="copyBtn" class="btn" data-i18n="wait.copy">Copy link</button>
+            <button id="shareBtn" class="btn primary" data-i18n="wait.shareBtn">Share</button>
+          </div>
+        </div>
+        <p id="waitGame" class="muted"></p>
+        <p id="waitBot" class="muted small"></p>
+        <button id="cancelBtn" class="btn ghost" data-i18n="common.cancel">Cancel</button>
+      </div>
+    </section>
+
+    <!-- HUD -->
+    <section id="hud" class="hidden">
+      <div class="hud-top">
+        <button id="leaveBtn" class="icon-btn">←</button>
+        <div class="scoreboard">
+          <div class="player me"><b id="meName">You</b></div>
+          <div class="score"><span id="meScore">0</span><em>:</em><span id="opScore">0</span></div>
+          <div class="player op"><b id="opName">Rival</b></div>
+        </div>
+        <span id="pingPill" class="pill ping">– ms</span>
+      </div>
+      <div id="statusLine" class="status-line"></div>
+      <div id="countdown" class="countdown hidden"></div>
+      <div id="hint" class="hint"></div>
+      <div id="emotes" class="emotes">
+        <button id="emoteToggle" class="icon-btn">😀</button>
+        <div id="emoteBar" class="emote-bar hidden"></div>
+      </div>
+      <div id="bubbles"></div>
+      <button id="actionBtn" class="action-btn hidden"><span>DASH</span><i></i></button>
+    </section>
+
+    <!-- RESULT -->
+    <div id="result" class="overlay hidden">
+      <div class="card result-card">
+        <div id="resultEmoji" class="result-emoji">🏆</div>
+        <h2 id="resultTitle">You win!</h2>
+        <div id="resultScore" class="result-score">7 : 3</div>
+        <div id="resultReward" class="reward"></div>
+        <p id="rematchNote" class="muted"></p>
+        <button id="rematchBtn" class="btn primary big" data-i18n="result.rematch">🔁 Rematch</button>
+        <p class="muted small" data-i18n="result.other">or play something else together</p>
+        <div id="switchRow" class="switch-row"></div>
+        <button id="homeBtn" class="btn ghost" data-i18n="result.leave">Leave room</button>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div id="settings" class="overlay hidden">
+      <div class="card sheet">
+        <button class="close icon-btn" data-close-settings>✕</button>
+        <h2 data-i18n="set.title">Settings</h2>
+        <label class="field">
+          <span data-i18n="set.server">Game server</span>
+          <input id="serverInput" placeholder="wss://play.example.com  or  192.168.1.5:8080" autocomplete="off" dir="ltr" />
+        </label>
+        <p class="muted small" id="serverHint" data-i18n="set.serverHint">Leave empty to use the default server. On home Wi-Fi, use your PC's IP and port 8080.</p>
+        <label class="toggle"><input type="checkbox" id="musicInput" /> <span data-i18n="set.music">Music</span></label>
+        <label class="toggle"><input type="checkbox" id="sfxInput" /> <span data-i18n="set.sfx">Sound effects</span></label>
+        <label class="toggle"><input type="checkbox" id="hapticsInput" /> <span data-i18n="set.haptics">Vibration</span></label>
+        <button id="saveSettings" class="btn primary big" data-i18n="set.save">Save</button>
+      </div>
+    </div>
+
+    <!-- PROFILE -->
+    <div id="profile" class="overlay hidden">
+      <div class="card sheet profile-card">
+        <button class="close icon-btn" data-close-profile>✕</button>
+        <div class="prof-head"><div id="profBig" class="prof-av">🙂</div><div><h2 id="profName">Player</h2><p class="muted"><b id="profCoins">0</b> 🪙</p></div></div>
+        <div class="stat-row">
+          <div><b id="stPlayed">0</b><span data-i18n="prof.played">Played</span></div>
+          <div><b id="stWon">0</b><span data-i18n="prof.won">Won</span></div>
+          <div><b id="stRate">0%</b><span data-i18n="prof.rate">Win rate</span></div>
+          <div><b id="stBest">0</b><span data-i18n="prof.best">Best streak</span></div>
+        </div>
+        <h3 data-i18n="prof.missions">Daily missions</h3>
+        <div id="missionList" class="missions"></div>
+        <h3 data-i18n="prof.avatar">Avatar</h3>
+        <div id="avatarGrid" class="avatar-grid"></div>
+        <h3 data-i18n="prof.games">Your games</h3>
+        <div id="gameStats" class="game-stats"></div>
+      </div>
+    </div>
+
+    <div id="toasts"></div>
+  </div>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
