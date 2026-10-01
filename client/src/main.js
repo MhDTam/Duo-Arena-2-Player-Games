@@ -49,14 +49,24 @@ import SpotView from './games/spot.js';
 import StackView from './games/stack.js';
 import ParkingView from './games/parking.js';
 import HeistView from './games/heist.js';
-import RootsView from './games/roots.js';
-import BracesView from './games/braces.js';
-import BrushView from './games/brush.js';
 import CavityView from './games/cavity.js';
 import TCannonView from './games/tcannon.js';
 import BraceWarView from './games/bracewar.js';
 import BalanceView from './games/balance.js';
-import SmileView from './games/smile.js';
+import RecallView from './games/recall.js';
+import FruitView from './games/fruit.js';
+import PropHuntView from './games/prophunt.js';
+import CubeView from './games/cube.js';
+import JigsawView from './games/jigsaw.js';
+import TennisView from './games/tennis.js';
+import HoopsView from './games/hoops.js';
+import PaintView from './games/paint.js';
+import RunnerView from './games/runner.js';
+import BoxingView from './games/boxing.js';
+import CurlingView from './games/curling.js';
+import SnowballView from './games/snowball.js';
+import ArcheryView from './games/archery.js';
+import ToolsView from './games/tools.js';
 import { GiftsView, CakeView, BalloonView, ChainView, ThiefView, PartyOrderView } from './games/party.js';
 
 const VIEWS = {
@@ -67,8 +77,9 @@ const VIEWS = {
   bowling: BowlingView, darts: DartsView, cannon: CannonView, seabattle: SeaBattleView, rps: RpsView,
   mathtug: MathTugView, foosball: FoosballView, geo: GeoView, golf: GolfView, pool: PoolView, racing: RacingView, bomber: BomberView,
   wire: WireView, code: CodeView, pipes: PipesView, stroop: StroopView, simon: SimonView, missing: MissingView, shadow: ShadowView, spot: SpotView, stack: StackView, parking: ParkingView,
-  heist: HeistView, roots: RootsView, braces: BracesView, brush: BrushView, cavity: CavityView, tcannon: TCannonView, bracewar: BraceWarView, balance: BalanceView, smile: SmileView,
+  heist: HeistView, cavity: CavityView, tcannon: TCannonView, bracewar: BraceWarView, balance: BalanceView, recall: RecallView,
   gifts: GiftsView, cake: CakeView, balloon: BalloonView, chain: ChainView, thief: ThiefView, party: PartyOrderView,
+  fruit: FruitView, prophunt: PropHuntView, cube: CubeView, jigsaw: JigsawView, tennis: TennisView, hoops: HoopsView, paint: PaintView, runner: RunnerView, boxing: BoxingView, curling: CurlingView, snowball: SnowballView, archery: ArcheryView, tools: ToolsView,
 };
 const EMOTES = ['👋', '😂', '😮', '😡', '👏', '🔥'];
 // background music mood per game
@@ -78,8 +89,9 @@ const GAME_MUSIC = {
   volley: 'beach', frogs: 'party', moles: 'party', potato: 'tense', bowling: 'lounge', darts: 'lounge', cannon: 'arcade', seabattle: 'tense', rps: 'party',
   foosball: 'arcade', mathtug: 'quiz', geo: 'travel', golf: 'chill', pool: 'lounge', racing: 'race', bomber: 'tense',
   wire: 'tense', code: 'board', pipes: 'chill', stroop: 'party', simon: 'quiz', missing: 'quiz', shadow: 'lounge', spot: 'travel', stack: 'arcade', parking: 'chill',
-  heist: 'arcade', roots: 'race', braces: 'quiz', brush: 'party', cavity: 'tense', tcannon: 'arcade', bracewar: 'arcade', balance: 'lounge', smile: 'quiz',
+  heist: 'arcade', cavity: 'tense', tcannon: 'arcade', bracewar: 'arcade', balance: 'lounge', recall: 'quiz',
   gifts: 'board', cake: 'chill', balloon: 'party', chain: 'travel', thief: 'tense', party: 'party',
+  fruit: 'party', prophunt: 'tense', cube: 'chill', jigsaw: 'chill', tennis: 'sports', hoops: 'sports', paint: 'party', runner: 'race', boxing: 'tense', curling: 'chill', snowball: 'party', archery: 'chill', tools: 'party',
 };
 const $ = (id) => document.getElementById(id);
 const store = {
@@ -177,6 +189,7 @@ function onMessage(m) {
       break;
     case 'pong': {
       const rtt = Math.round(performance.now() - m.c);
+      app.rtt = app.rtt ? app.rtt * 0.7 + rtt * 0.3 : rtt;
       const p = $('pingPill');
       p.textContent = app.local ? t('hud.onDevice', '🤖 on device') : `${rtt} ms`;
       p.classList.toggle('warn', !app.local && rtt > 180);
@@ -259,7 +272,7 @@ function startGame(m) {
   app.buffer.minDelay = m.local ? 20 : 50; // on-device matches need almost no buffering
   app.lastSnap = m.snap;
   const View = VIEWS[m.game];
-  app.view = new View({ stage, slot: m.you, send });
+  app.view = new View({ stage, slot: m.you, send, online: !m.local, latest: () => app.lastSnap, rtt: () => app.rtt || 80 });
   stage.warm();
   playTheme(GAME_MUSIC[m.game] || 'arcade');
   stage.setOrbit(false);

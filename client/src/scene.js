@@ -53,6 +53,7 @@ export const SKIES = {
   lilac: ['#bfa9ff', '#fff0f6', 0xf1e8ff],
   mint: ['#94ecd2', '#f6fff0', 0xe4fff4],
   candy: ['#ffb3d1', '#fff0f6', 0xffe3ef],
+  dusk: ['#6741d9', '#e5dbff', 0xe5dbff],
 };
 
 // Merge every static mesh inside `group` that shares a material look into one mesh per look.

@@ -4,7 +4,7 @@ import { solve as wireSolve } from './games/wire.js';
 import { ALL_CODES, consistent } from './games/code.js';
 import { turnsNeeded } from '../shared/pipes.js';
 import { slidePos } from '../shared/stack.js';
-import { START } from '../shared/parking.js';
+import { START, moverAt } from '../shared/parking.js';
 
 const R = Math.random;
 const pick = (arr) => arr[Math.floor(R() * arr.length)];
@@ -170,15 +170,10 @@ export const BOTS2 = {
   },
 
   parking(sim, slot, L) {
-    // follow a smooth path through the layout's waypoints (pure pursuit); if the car ends up
-    // crooked in the bay, back out along the path and try again
-    let round = -1, path = null, idx = 0, back = 0, stopT = 0, stuck = 0, think = 0;
-    const buildPath = (lay) => {
-      const P = [[START.x, START.z], ...lay.wp];
-      const ax = lay.bay.ax;
-      const prev = P[P.length - 2], end = P[P.length - 1];
-      const dir = ax === 'z' ? Math.sign(end[1] - prev[1]) : Math.sign(end[0] - prev[0]);
-      P.push(ax === 'z' ? [end[0], end[1] + dir * 0.6] : [end[0] + dir * 0.6, end[1]]); // run-out keeps the nose straight
+    // follow a smooth path through the layout's waypoints (pure pursuit). Bays you must back into
+    // have a second, reverse path. If the car ends up crooked, back off a little and try again.
+    let round = -1, paths = null, seg = 0, idx = 0, back = 0, stopT = 0, stuck = 0, think = 0;
+    const spline = (P) => {
       const out = [];
       const cr = (a, b, c, d, t) => 0.5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t * t + (-a + 3 * b - 3 * c + d) * t * t * t);
       for (let i = 0; i < P.length - 1; i++) {
@@ -189,38 +184,82 @@ export const BOTS2 = {
       out.push(P[P.length - 1]);
       return out;
     };
+    const runOut = (P) => { const prev = P[P.length - 2], end = P[P.length - 1], dx = end[0] - prev[0], dz = end[1] - prev[1], d = Math.hypot(dx, dz) || 1; return [...P, [end[0] + (dx / d) * 0.6, end[1] + (dz / d) * 0.6]]; };
+    const build = (lay) => {
+      const f = [[START.x, START.z], ...lay.wp];
+      if (!lay.rwp) return [{ pts: spline(runOut(f)), dir: 1, park: true }];
+      return [{ pts: spline(f), dir: 1, park: false }, { pts: spline(runOut(lay.rwp)), dir: -1, park: true }];
+    };
+    // parallel parking: reverse on full lock until the car is angled enough for the sideways
+    // distance left, counter-steer until straight again, then creep to the middle of the bay
+    let pp = null;
+    const UPA = -Math.PI / 2, TURN = 1.25 / Math.tan(0.62);
+    const parallel = (c, lay, dt) => {
+      const bay = lay.bay;
+      if (!pp) {
+        if (Math.abs(c.v) > 0.02) { sim.onInput(slot, { th: Math.abs(c.v) > 0.3 ? -Math.sign(c.v) : 0, st: 0 }); return; }
+        pp = { side: Math.sign(bay.x - c.x) || 1, ph: 1, th: Math.acos(clamp(1 - Math.abs(bay.x - c.x) / (2 * TURN), -1, 1)) * (1 + gauss() * [0.05, 0.03, 0.015][L]), wait: [0.9, 0.5, 0.25][L], tries: 0 };
+      }
+      if (pp.wait > 0) { pp.wait -= dt; sim.onInput(slot, { th: Math.abs(c.v) > 0.3 ? -Math.sign(c.v) : 0, st: 0 }); return; }
+      if (c.stun > 0 && pp.ph < 3) pp.ph = 3;
+      const side = pp.side, dev = wrap(c.a - UPA), vR = -[0.55, 0.7, 0.85][L];
+      const hold = (v) => clamp((v - c.v) * 2.5, -1, 1);
+      if (pp.ph === 1) { if (Math.abs(dev) >= pp.th) { pp.ph = 2; pp.s = Math.sign(dev); } sim.onInput(slot, { th: hold(vR), st: side }); return; }
+      if (pp.ph === 2) { if (Math.abs(dev) < 0.03 || dev * pp.s < 0) pp.ph = 3; sim.onInput(slot, { th: hold(vR), st: -side }); return; }
+      // straighten up along the bay (pure pursuit on its centre line); if the car stops crooked
+      // or off-centre, pull forward a little and back in again
+      if (pp.goal === undefined) { pp.goal = bay.z; pp.idle = 0; }
+      const e = pp.goal - c.z, tr = e > 0 ? -1 : 1;
+      if (Math.abs(e) < 0.1) {
+        sim.onInput(slot, { th: Math.abs(c.v) > 0.3 ? -Math.sign(c.v) : 0, st: 0 });
+        if (Math.abs(c.v) < 0.05) pp.idle += dt;
+        if (pp.idle > 0.8) { pp.idle = 0; pp.goal = pp.goal === bay.z ? bay.z - 0.65 : bay.z; }
+        return;
+      }
+      pp.idle = 0;
+      const tz = c.z + Math.sign(e) * 0.9, ha = tr > 0 ? c.a : c.a + Math.PI;
+      const al = wrap(Math.atan2(tz - c.z, bay.x - c.x) - ha), ld = Math.hypot(tz - c.z, bay.x - c.x);
+      let st = clamp(Math.atan(2 * 1.25 * Math.sin(al) / ld) / 0.62, -1, 1);
+      if (tr < 0) st = -st;
+      sim.onInput(slot, { th: hold(tr * clamp(Math.abs(e) * 1.2, 0.25, 0.5)), st });
+    };
     return { tick(dt) {
       if (sim.phase !== 'play' || sim.pause > 0) { round = -1; return; }
       const c = sim.cars[slot], lay = sim.lay;
-      if (sim.round !== round) { round = sim.round; path = buildPath(lay); idx = 0; back = 0; stopT = 0; stuck = 0; think = [2.4, 1.4, 0.7][L] * (0.7 + R() * 0.6); }
+      if (sim.round !== round) { round = sim.round; paths = build(lay); seg = 0; idx = 0; back = 0; stopT = 0; stuck = 0; pp = null; think = [2.4, 1.4, 0.7][L] * (0.7 + R() * 0.6); }
       if (c.parked) return;
       if (think > 0) { think -= dt; return; }
+      const P = paths[seg], path = P.pts, end = path[path.length - 1];
       const bay = lay.bay, bd = Math.hypot(bay.x - c.x, bay.z - c.z);
-      // progress along the path: closest point near the current index
       let best = 1e9, bi = idx;
       for (let i = Math.max(0, idx - 15); i < Math.min(path.length, idx + 40); i++) { const d = Math.hypot(path[i][0] - c.x, path[i][1] - c.z); if (d < best) { best = d; bi = i; } }
       idx = bi;
-      const dirSign = back > 0 ? -1 : 1;
+      // end of a non-parking leg: stop, then take the next (reverse) leg
+      if (!P.park && idx >= path.length - 4) {
+        if (Math.abs(c.v) > 0.02) { sim.onInput(slot, { th: Math.abs(c.v) > 0.3 ? -Math.sign(c.v) : 0, st: 0 }); return; }
+        seg++; idx = 0; return;
+      }
+      if (lay.par && P.park) { parallel(c, lay, dt); return; }
+      const travel = back > 0 ? -P.dir : P.dir; // backing off reverses the leg's direction
       if (back > 0) back -= dt;
       const look = Math.round((0.75 + Math.abs(c.v) * 0.25) / 0.1);
-      const tgt = path[Math.max(0, Math.min(path.length - 1, idx + dirSign * look))];
-      // heading error measured from the car's nose (or tail when reversing)
-      const ha = dirSign > 0 ? c.a : c.a + Math.PI;
+      const tgt = path[Math.max(0, Math.min(path.length - 1, idx + (back > 0 ? -1 : 1) * look))];
+      const ha = travel > 0 ? c.a : c.a + Math.PI;
       const alpha = wrap(Math.atan2(tgt[1] - c.z, tgt[0] - c.x) - ha);
       const ld = Math.max(0.4, Math.hypot(tgt[0] - c.x, tgt[1] - c.z));
       let steer = Math.atan(2 * 1.25 * Math.sin(alpha) / ld) / 0.62;
-      if (dirSign < 0) steer = -steer;
+      if (travel < 0) steer = -steer;
       steer = clamp(steer + gauss() * [0.1, 0.05, 0.02][L], -1, 1);
-      // speed plan: slow down for the bay
-      let vDes = [1.15, 1.55, 2.1][L];
-      const near = bd < 3.2;
-      if (near) vDes = Math.min(vDes, 0.3 + bd * 0.55);
-      if (back > 0) vDes = -1.1;
+      let vMax = [1.15, 1.55, 2.1][L] * (P.dir < 0 ? 0.6 : 1);
+      const near = P.park && bd < 3.2;
+      if (near) vMax = Math.min(vMax, 0.3 + bd * 0.5);
+      // cross traffic: wait while a moving car is close to where we're heading
+      if (lay.mv) for (const m of lay.mv) { const o = moverAt(m, sim.tt + 0.5); if (Math.abs(o.z - c.z) < 2.3 && Math.abs(o.x - c.x) < 2.4) vMax = 0; }
+      const vDes = travel * vMax;
       let th = clamp((vDes - c.v) * 1.8, -1, 1);
-      const inside = bd < 0.18 || (idx >= path.length - 8 && bd < 0.45);
-      if (inside && back <= 0) th = c.v > 0.03 ? -1 : 0;
-      // stopped but not parked: reverse out a bit and come in again
-      if (Math.abs(c.v) < 0.05 && back <= 0) { stopT += dt; } else stopT = 0;
+      const inside = P.park && (bd < 0.18 || (idx >= path.length - 8 && bd < 0.45));
+      if (inside && back <= 0) th = Math.abs(c.v) > 0.03 ? -Math.sign(c.v) : 0;
+      if (Math.abs(c.v) < 0.05 && back <= 0 && vMax > 0) stopT += dt; else stopT = 0;
       if (stopT > (inside ? 0.9 : 1.5)) { stopT = 0; back = 1.1; idx = Math.max(0, idx - 12); }
       if (c.stun > 0) { stuck++; if (stuck > 3 && back <= 0) { back = 0.8; stuck = 0; } }
       sim.onInput(slot, { th, st: steer });

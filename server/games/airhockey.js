@@ -3,6 +3,7 @@ import { AIR_HOCKEY as C } from '../../shared/games.js';
 const SUBSTEPS = 4;
 const PADDLE_MAX_SPEED = 18;
 const PUCK_MAX_SPEED = 24;
+const SQUEEZE_MAX = 8; // top speed of a puck squeezed against a rail
 const RESTITUTION_WALL = 0.88;
 const RESTITUTION_PADDLE = 0.95;
 const FRICTION_PER_SEC = 0.55; // velocity kept after 1 second
@@ -12,6 +13,7 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 export class AirHockeySim {
   constructor() {
+    this.snapEvery = 1; // 60 snapshots a second: the puck is fast
     this.hw = C.W / 2;
     this.hl = C.L / 2;
     this.score = [0, 0];
@@ -71,6 +73,11 @@ export class AirHockeySim {
     if (this.pause > 0) { this.pause -= dt; return; }
 
     const k = this.puck;
+    // a dead puck lying against an end rail (where no mallet can get behind it) drifts back into play
+    if (Math.abs(k.z) > this.hl - C.paddleR - 0.05 && Math.hypot(k.vx, k.vz) < 1) {
+      this.deadT = (this.deadT || 0) + dt;
+      if (this.deadT > 1.2) { k.vz = -Math.sign(k.z) * 2.2; k.vx = -Math.sign(k.x) * 0.6; this.deadT = 0; }
+    } else this.deadT = 0;
     k.x += k.vx * dt;
     k.z += k.vz * dt;
     const f = Math.pow(FRICTION_PER_SEC, dt);
@@ -98,14 +105,20 @@ export class AirHockeySim {
       const dist = Math.hypot(dx, dz);
       const minD = C.paddleR + r;
       if (dist < minD && dist > 1e-6) {
-        const nx = dx / dist, nz = dz / dist;
-        k.x = p.x + nx * minD;
-        k.z = p.z + nz * minD;
-        // keep the puck inside the rails; if squeezed, the mallet yields instead
-        k.x = clamp(k.x, -this.hw + r, this.hw - r);
-        if (Math.abs(k.x) >= C.goalW / 2 - r * 0.2) k.z = clamp(k.z, -this.hl + r, this.hl - r);
-        const ex = k.x - p.x, ez = k.z - p.z, ed = Math.hypot(ex, ez);
-        if (ed < minD - 1e-4) { const ux = ed > 1e-6 ? ex / ed : nx, uz = ed > 1e-6 ? ez / ed : nz; p.x = k.x - ux * minD; p.z = k.z - uz * minD; }
+        let nx = dx / dist, nz = dz / dist;
+        k.x = p.x + nx * minD; k.z = p.z + nz * minD;
+        // keep the puck inside the rails and note which rails it is pressed against
+        let railX = 0, railZ = 0;
+        if (k.x > this.hw - r) { k.x = this.hw - r; railX = 1; } else if (k.x < -this.hw + r) { k.x = -this.hw + r; railX = -1; }
+        if (Math.abs(k.x) >= C.goalW / 2 - r * 0.2) {
+          if (k.z > this.hl - r) { k.z = this.hl - r; railZ = 1; } else if (k.z < -this.hl + r) { k.z = -this.hl + r; railZ = -1; }
+        }
+        if (railX || railZ) {
+          // the mallet yields instead of overlapping the puck
+          const ex = k.x - p.x, ez = k.z - p.z, ed = Math.hypot(ex, ez) || 1;
+          nx = ex / ed; nz = ez / ed;
+          if (ed < minD - 1e-4) { p.x = k.x - nx * minD; p.z = k.z - nz * minD; }
+        }
         const rvx = k.vx - p.vx, rvz = k.vz - p.vz;
         const vn = rvx * nx + rvz * nz;
         if (vn < 0) {
@@ -114,7 +127,20 @@ export class AirHockeySim {
           const sp = Math.hypot(k.vx, k.vz);
           if (sp > PUCK_MAX_SPEED) { k.vx *= PUCK_MAX_SPEED / sp; k.vz *= PUCK_MAX_SPEED / sp; }
           const power = Math.min(1, -vn / 15);
-          if (this.clock - (p.lastHit ?? -1) > 0.06 || power > 0.5) { p.lastHit = this.clock; this.events.push({ e: 'hit', slot, x: Math.round(k.x * 100) / 100, z: Math.round(k.z * 100) / 100, power: Math.round(power * 100) / 100 }); }
+          if (!(railX || railZ) && (this.clock - (p.lastHit ?? -1) > 0.06 || power > 0.5)) { p.lastHit = this.clock; this.events.push({ e: 'hit', slot, x: Math.round(k.x * 100) / 100, z: Math.round(k.z * 100) / 100, power: Math.round(power * 100) / 100 }); }
+        }
+        if (railX || railZ) {
+          // squeezed against a rail: the rail takes the push. No speed into the rail (so no hammering
+          // between mallet and rail), a sane top speed, and the puck slides out along the rail.
+          if (railX && k.vx * railX > 0) k.vx = -k.vx * 0.35; // a soft bounce off the rail, not a hammer
+          if (railZ && k.vz * railZ > 0) k.vz = -k.vz * 0.35;
+          let sp = Math.hypot(k.vx, k.vz);
+          if (sp > SQUEEZE_MAX) { k.vx *= SQUEEZE_MAX / sp; k.vz *= SQUEEZE_MAX / sp; sp = SQUEEZE_MAX; }
+          if (railX && railZ) { k.vx = -railX * 3; k.vz = -railZ * 3; } // stuck in a corner: pop it back out
+          else if (sp < 1.5) {
+            const away = (a, b) => (Math.abs(a - b) > 0.02 ? Math.sign(a - b) : (Math.random() < 0.5 ? -1 : 1));
+            if (railX) k.vz = away(k.z, p.z) * 2.5; else k.vx = away(k.x, p.x) * 2.5;
+          }
         }
       }
     });
@@ -141,7 +167,7 @@ export class AirHockeySim {
     const r2 = (v) => Math.round(v * 1000) / 1000;
     return {
       p: this.paddles.map((p) => [r2(p.x), r2(p.z)]),
-      k: [r2(this.puck.x), r2(this.puck.z)],
+      k: [r2(this.puck.x), r2(this.puck.z)], kv: [r2(this.puck.vx), r2(this.puck.vz)],
       s: this.score,
       pa: this.pause > 0 ? 1 : 0,
     };

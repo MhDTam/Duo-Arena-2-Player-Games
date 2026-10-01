@@ -1,9 +1,10 @@
 import { SHADOW as C } from '../../shared/games.js';
 import { mulberry, newSeed } from '../../shared/rng.js';
-import { makeShadow } from '../../shared/shadow.js';
+import { makeProjection } from '../../shared/projection.js';
 
-// Shadow Match: a cube sculpture turns slowly under a lamp. Which of four shadows does it cast on
-// the floor? First right answer takes the point; a wrong answer sits you out for that puzzle.
+// Projection: a cube sculpture is shown from above-front-right. Which picture shows it seen straight
+// from one side (front / right / left / top)? First right answer takes the point; a wrong answer
+// sits you out for that puzzle.
 export class ShadowSim {
   constructor() {
     this.score = [0, 0];
@@ -15,7 +16,7 @@ export class ShadowSim {
 
   newRound() {
     this.round++;
-    this.pz = makeShadow(mulberry(newSeed()), this.round);
+    this.pz = makeProjection(mulberry(newSeed()), this.round);
     this.phase = 'look'; this.timer = 1.2;
     this.ans = [-1, -1]; this.rw = -1;
     this.events.push({ e: 'round', n: this.round });
@@ -31,7 +32,7 @@ export class ShadowSim {
   }
 
   end(w) {
-    this.phase = 'reveal'; this.timer = 2.8; this.rw = w;
+    this.phase = 'reveal'; this.timer = 3.6; this.rw = w;
     if (w >= 0) { this.score[w]++; if (this.score[w] >= C.winScore) this.winner = w; }
     this.events.push({ e: 'roundwin', winner: w, a: this.pz.a });
   }
@@ -40,7 +41,7 @@ export class ShadowSim {
     if (this.winner !== null) return;
     this.timer -= dt;
     if (this.timer > 0) return;
-    if (this.phase === 'look') { this.phase = 'ask'; this.timer = 18; }
+    if (this.phase === 'look') { this.phase = 'ask'; this.timer = 25; }
     else if (this.phase === 'ask') { this.events.push({ e: 'timeout' }); this.end(-1); }
     else if (this.phase === 'reveal') this.newRound();
   }
@@ -48,7 +49,7 @@ export class ShadowSim {
   snapshotFor(slot) {
     return {
       s: this.score, n: this.round, ph: this.phase, t: Math.ceil(this.timer),
-      cu: this.pz.cubes, o: this.phase === 'look' ? null : this.pz.opts,
+      cu: this.pz.cubes, dr: this.pz.dir, o: this.phase === 'look' ? null : this.pz.opts,
       a: this.phase === 'reveal' ? this.pz.a : -1, my: this.ans[slot], op: this.ans[1 - slot] >= 0 ? 1 : 0, rw: this.rw,
     };
   }

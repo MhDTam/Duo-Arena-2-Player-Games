@@ -33,9 +33,9 @@ export const flavName = (f) => t(`party.flav.${f}`, FLAV_EN[f]);
 export const flavChip = (f) => `<span class="tg">${FLAV_EMO[f]} ${flavName(f)}</span>`;
 
 // animal guests (thief + party order)
-export const ANI_EMO = ['🐰', '🐱', '🐶', '🐼', '🦊', '🐸'];
-export const ANI_COL = [0xf8f9fa, 0xffa94d, 0xc0915e, 0x495057, 0xff6b35, 0x69db7c];
-const ANI_EN = ['Bunny', 'Kitty', 'Puppy', 'Panda', 'Foxy', 'Froggy'];
+export const ANI_EMO = ['🐶', '🐰', '🐱', '🐻', '🦊', '🐸'];
+export const ANI_COL = [0xc08552, 0xf8f9fa, 0xffa94d, 0x8d5524, 0xff7a2f, 0x69db7c];
+const ANI_EN = ['Dog', 'Rabbit', 'Cat', 'Bear', 'Fox', 'Frog'];
 export const aniName = (i) => t(`party.ani.${i}`, ANI_EN[i]);
 export const aniChip = (i) => `<span class="tg">${ANI_EMO[i]} ${aniName(i)}</span>`;
 

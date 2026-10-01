@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { AirHockeySim } from '../../../server/games/airhockey.js';
 import { AIR_HOCKEY as C } from '../../../shared/games.js';
 import { PALETTE, mat, roundedBox, makeIsland, trail, bake } from '../scene.js';
 import { sfx } from '../audio.js';
@@ -25,7 +26,8 @@ function airHoles() {
 }
 
 export default class AirHockeyView {
-  constructor({ stage, slot, send }) {
+  constructor(opts) {
+    const { stage, slot, send } = opts;
     this.stage = stage; this.slot = slot; this.send = send;
     this.hw = C.W / 2; this.hl = C.L / 2;
     stage.setSky('lilac');
@@ -141,6 +143,45 @@ export default class AirHockeyView {
     this.mine = { x: 0, z: start };
     this.lastSent = 0;
     this.time = 0;
+    // online: the puck is simulated here too, so it reacts to your mallet instantly; every new server
+    // snapshot gently pulls it back onto the server's path (big disagreements snap)
+    this.online = !!opts.online && !window.__noPred; this.latest = opts.latest; this.rttFn = opts.rtt;
+    if (this.online) {
+      this.ghost = new AirHockeySim();
+      this.ghost.pause = 0; this.ghost.goal = () => { this.ghost.out = true; };
+      this.lastSrv = null;
+    }
+  }
+
+  // advance the local puck and reconcile it with the newest server snapshot
+  predictPuck(dt, other, rival) {
+    const G = this.ghost, K = G.puck, srv = this.latest?.();
+    if (srv && srv !== this.lastSrv && srv.k) {
+      this.lastSrv = srv;
+      const age = Math.min(0.25, (this.rttFn?.() || 80) / 2000 + 1 / 60);
+      const kv = srv.kv || [0, 0];
+      const sx = srv.k[0] + kv[0] * age, sz = srv.k[1] + kv[1] * age;
+      const ex = sx - K.x, ez = sz - K.z, err = Math.hypot(ex, ez);
+      const flipped = kv[0] * K.vx + kv[1] * K.vz < 0;
+      // right after *my* hit the server hasn't heard of it yet: trust the local puck for one round trip
+      const trusting = performance.now() < (this.trustUntil || 0);
+      if (srv.pa || err > (trusting ? 3.5 : 1.4) || G.out) { K.x = srv.k[0]; K.z = srv.k[1]; K.vx = kv[0]; K.vz = kv[1]; G.out = false; this.trustUntil = 0; }
+      else if (!trusting) {
+        const f = flipped ? 0.55 : 0.22;
+        K.x += ex * f; K.z += ez * f; K.vx += (kv[0] - K.vx) * f * 1.4; K.vz += (kv[1] - K.vz) * f * 1.4;
+      }
+      this.srvPause = !!srv.pa;
+    }
+    if (this.srvPause || G.out) return;
+    const me = G.paddles[this.slot], op = G.paddles[other];
+    me.tx = this.mine.x; me.tz = this.mine.z;
+    op.tx = rival[0]; op.tz = rival[1];
+    // step by real elapsed time (the frame loop clamps dt), in 60 Hz slices
+    const now = performance.now(), real = Math.min(0.25, this.lastPred ? (now - this.lastPred) / 1000 : dt);
+    this.lastPred = now;
+    for (let left = real; left > 1e-4; left -= 1 / 60) G.step(Math.min(left, 1 / 60));
+    if (G.events.some((e) => e.e === 'hit' && e.slot === this.slot)) this.trustUntil = now + (this.rttFn?.() || 80) + 120;
+    G.events.length = 0;
   }
 
   clampOwn(p) {
@@ -185,8 +226,14 @@ export default class AirHockeyView {
     this.paddles[other].position.x = lerp(a.p[other][0], b.p[other][0], k);
     this.paddles[other].position.z = lerp(a.p[other][1], b.p[other][1], k);
 
-    const jump = Math.hypot(b.k[0] - a.k[0], b.k[1] - a.k[1]) > 3; // reset after goal
-    const px = jump ? b.k[0] : lerp(a.k[0], b.k[0], k), pz = jump ? b.k[1] : lerp(a.k[1], b.k[1], k);
+    let jump = Math.hypot(b.k[0] - a.k[0], b.k[1] - a.k[1]) > 3; // reset after goal
+    let px = jump ? b.k[0] : lerp(a.k[0], b.k[0], k), pz = jump ? b.k[1] : lerp(a.k[1], b.k[1], k);
+    if (this.ghost) {
+      this.predictPuck(dt, other, [this.paddles[other].position.x, this.paddles[other].position.z]);
+      const K = this.ghost.puck;
+      jump = this.puckPrev ? Math.hypot(K.x - this.puckPrev.x, K.z - this.puckPrev.z) > 3 : false;
+      px = K.x; pz = K.z;
+    }
     // the puck drops into the goal slot once it is past the end rail
     this.puck.position.y = TABLE_Y - clamp((Math.abs(pz) - this.hl + 0.05) * 1.4, 0, 0.45);
     if (this.puckPrev && dt > 0 && !jump) { const sp = Math.hypot(px - this.puckPrev.x, pz - this.puckPrev.z) / dt; this.spin += sp * dt * 0.8; }

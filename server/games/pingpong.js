@@ -8,6 +8,7 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 export class PingPongSim {
   constructor() {
+    this.snapEvery = 1; // 60 snapshots a second: the ball is fast
     this.hw = C.W / 2; this.hl = C.L / 2;
     this.score = [0, 0];
     this.events = [];

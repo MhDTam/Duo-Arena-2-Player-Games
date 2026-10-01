@@ -6,7 +6,7 @@ import { sfx } from '../audio.js';
 import { t } from '../i18n.js';
 import { CHAIN as CH } from '../../../shared/logic.js';
 import { isPortrait, hitTest, FONT, canvasTex } from './kit8.js';
-import { makeTooth } from './toothkit.js';
+import { makeAnimal, addCrumbs } from './animals.js';
 import {
   PartyBase, PCOL, COLS, colChip, kidName, kidChip, KID_COL, GIFT_EMO, giftChip, FLAV_EMO, FLAV_COL, flavChip, flavName,
   ANI_EMO, ANI_COL, aniName, aniChip, nameTag, guest, btn, hex, colName,
@@ -16,50 +16,82 @@ const quote = (s) => `“${s}”`;
 const sprite = (text, size = 0.8, bg = '#ffffff') => textSprite(text, { size, bg });
 
 // ============================================================ Whose gift?
+// The grid doubles as a notes sheet: tap a cell to cycle ✓ (this kid got it) → ✗ (ruled out) → empty.
 export class GiftsView extends PartyBase {
   constructor(o) {
     super(o, { title: `🎁 ${t('gifts.title', 'Who got which gift?')}`, cls: 'gifts-panel', wide: true });
-    const w = o.stage.world;
-    this.kids = [0, 1, 2, 3].map((i) => {
-      const x = (i - 1.5) * 1.8;
+    this.n = 0; this.kids = []; this.pile = [];
+    this.cp.op.textContent = t('gifts.op', 'Seats 1 → 4, left to right');
+    this.cp.extra.innerHTML = `<div class="pick-rows"></div><div class="clue-fb"></div><button class="clue-go">✓ ${t('btn.check', 'CHECK')}</button>`;
+    this.rows = this.cp.extra.querySelector('.pick-rows');
+    this.rows.addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) this.cycle(+b.dataset.p, +b.dataset.g); });
+    this.fb = this.cp.extra.querySelector('.clue-fb');
+    this.go = this.cp.extra.querySelector('.clue-go');
+    this.go.addEventListener('click', () => this.submit());
+    this.build(4);
+  }
+
+  build(n) {
+    const w = this.stage.world;
+    this.kids.forEach((K) => [K.b, K.tag, K.hit, K.gift].forEach((o) => o && w.remove(o)));
+    this.pile.forEach((o) => w.remove(o));
+    this.n = n;
+    this.kids = [...Array(n).keys()].map((i) => {
+      const x = (i - (n - 1) / 2) * 1.8;
       const b = guest(KID_COL[i], 0.5); b.position.set(x, 0, -0.3); w.add(b);
       const tag = nameTag(`${i + 1}. ${kidName(i)}`, 1.75); tag.position.x = x; tag.position.z = -0.3; w.add(tag);
       const hit = new THREE.Mesh(new THREE.BoxGeometry(1.5, 2.6, 1.4), new THREE.MeshBasicMaterial({ visible: false })); hit.position.set(x, 1.3, -0.3); hit.userData.kid = i; w.add(hit);
-      return { b, x, hit, gift: null, g: -2 };
+      return { b, x, hit, tag, gift: null, g: -2 };
     });
-    // the four wrapped presents, piled up at the side
-    [0, 1, 2, 3].forEach((c) => {
-      const bx = roundedBox(0.5, 0.42, 0.5, 0.06, COLS[c]); bx.position.set((c - 1.5) * 0.62, 0.21, 1.3); bx.rotation.y = c * 0.4 - 0.6; w.add(bx);
+    // the wrapped presents, piled up in front
+    this.pile = [];
+    for (let c = 0; c < n; c++) {
+      const bx = roundedBox(0.5, 0.42, 0.5, 0.06, COLS[c]); bx.position.set((c - (n - 1) / 2) * 0.62, 0.21, 1.3); bx.rotation.y = c * 0.4 - 0.6; w.add(bx);
       const rib = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.44, 0.09), mat(0xffffff)); rib.position.copy(bx.position); rib.rotation.y = bx.rotation.y; w.add(rib);
-    });
-    this.sel = [-1, -1, -1, -1];
-    this.cp.op.textContent = t('gifts.op', 'Seats 1 → 4, left to right');
-    this.cp.extra.innerHTML = `<div class="pick-rows">${[0, 1, 2, 3].map((p) => `<div class="pick-row"><span>${p + 1}. ${kidName(p)}</span>${GIFT_EMO.map((e, g) => btn(e, '', `data-p="${p}" data-g="${g}"`)).join('')}</div>`).join('')}</div><button class="clue-go" disabled>✓ ${t('btn.check', 'CHECK')}</button>`;
-    this.btns = [...this.cp.extra.querySelectorAll('.pick-row button')];
-    this.btns.forEach((b) => b.addEventListener('click', () => this.pick(+b.dataset.p, +b.dataset.g)));
-    this.go = this.cp.extra.querySelector('.clue-go');
-    this.go.addEventListener('click', () => this.submit());
-    this.fit(3.4, 1.5, 0, 1.25);
+      this.pile.push(bx, rib);
+    }
+    this.cell = [...Array(n)].map(() => Array(n).fill(0));
+    this.cp.op.textContent = t('gifts.opN', 'Seats 1 → {n}, left to right', { n });
+    this.rows.innerHTML = [...Array(n).keys()].map((p) => `<div class="pick-row"><span>${p + 1}. ${kidName(p)}</span>${GIFT_EMO.slice(0, n).map((e, g) => btn(e, '', `data-p="${p}" data-g="${g}"`)).join('')}</div>`).join('');
+    this.btns = [...this.rows.querySelectorAll('button')];
+    this.fit(n === 3 ? 2.6 : 3.4, 1.5, 0, 1.25);
+    this.refresh();
   }
 
-  pick(p, g) { if (!this.canAct()) return; this.sel[p] = this.sel[p] === g ? -1 : g; sfx.click(); this.refresh(); }
+  sel() { return this.cell.map((row) => row.indexOf(1)); }
+
+  cycle(p, g) {
+    if (!this.canAct()) return;
+    const v = (this.cell[p][g] + 1) % 3;
+    if (v === 1) { for (let k = 0; k < this.n; k++) { if (this.cell[p][k] === 1) this.cell[p][k] = 0; if (this.cell[k][g] === 1) this.cell[k][g] = 0; } }
+    this.cell[p][g] = v;
+    sfx.click(); this.fb.textContent = ''; this.refresh();
+  }
+
   canAct() { const s = this.last; return s && s.ph === 'play' && !s.rd && !(s.lk > 0); }
   refresh() {
-    const dup = (g) => this.sel.filter((v) => v === g).length > 1;
-    this.btns.forEach((b) => { const p = +b.dataset.p, g = +b.dataset.g; b.classList.toggle('on', this.sel[p] === g); b.classList.toggle('dup', this.sel[p] === g && dup(g)); });
-    this.go.disabled = !(this.sel.every((v) => v >= 0) && new Set(this.sel).size === 4) || !this.canAct();
+    this.btns.forEach((b) => { const v = this.cell[+b.dataset.p][+b.dataset.g]; b.classList.toggle('on', v === 1); b.classList.toggle('x', v === 2); });
+    this.go.disabled = !this.canAct();
   }
-  submit() { if (this.go.disabled) return; this.send({ t: 'i', a: this.sel.slice() }); }
+  submit() {
+    if (!this.canAct()) return;
+    const sel = this.sel();
+    if (sel.some((v) => v < 0)) { this.fb.textContent = t('gifts.m.missing', 'Give every kid a gift (tap until ✓)'); this.fb.classList.add('warn'); sfx.error(); return; }
+    this.send({ t: 'i', a: sel });
+  }
 
   pointer(type, ev) {
-    if (type !== 'down') return;
+    if (type !== 'down' || !this.canAct()) return;
     const h = hitTest(this.stage, ev, this.kids.map((k) => k.hit));
     if (!h) return;
-    // tap a kid: give them the next gift nobody has yet
-    const p = h.userData.kid, order = [0, 1, 2, 3, -1];
-    if (!this.canAct()) return;
-    const idx = this.sel[p] < 0 ? -1 : order.indexOf(this.sel[p]);
-    for (let k = 1; k <= 5; k++) { const g = order[(idx + k + 5) % 5]; if (g < 0 || !this.sel.includes(g)) { this.sel[p] = g; sfx.click(); this.refresh(); return; } }
+    // tap a kid: hand them the next gift nobody has yet
+    const p = h.userData.kid, sel = this.sel(), cur = sel[p];
+    for (let k = 1; k <= this.n + 1; k++) {
+      const g = (cur + k + this.n + 1) % (this.n + 1) - 1;
+      if (g < 0) { if (cur >= 0) this.cell[p][cur] = 0; break; }
+      if (!sel.includes(g)) { if (cur >= 0) this.cell[p][cur] = 0; this.cell[p][g] = 1; break; }
+    }
+    sfx.click(); this.refresh();
   }
 
   clue([ty, a, b]) {
@@ -80,28 +112,30 @@ export class GiftsView extends PartyBase {
     this.refit();
     const s = sample?.b; if (!s) return;
     const first = !this.last; this.last = s;
+    if ((s.k || 4) !== this.n) this.build(s.k || 4);
     if (first) this.refresh();
     this.setClues(s.c.map((c) => ({ html: this.clue(c) })));
-    const show = s.ans || this.sel;
+    const show = s.ans || this.sel();
     this.kids.forEach((K, i) => {
       K.b.position.y = Math.abs(Math.sin(this.time * 3 + i)) * 0.06;
       const g = show[i];
       if (g !== K.g) {
         K.g = g; if (K.gift) { this.stage.world.remove(K.gift); K.gift = null; }
-        if (g >= 0) { K.gift = sprite(GIFT_EMO[g], 0.9, s.ans ? '#d3f9d8' : '#ffffff'); K.gift.position.set(K.x, 2.45, -0.3); this.stage.world.add(K.gift); }
+        // the kid holds the gift in front of them
+        if (g >= 0) { K.gift = sprite(GIFT_EMO[g], 0.75, s.ans ? '#d3f9d8' : '#ffffff'); this.stage.world.add(K.gift); sfx.pop(); }
       }
-      if (K.gift) K.gift.position.y = 2.45 + Math.sin(this.time * 4 + i) * 0.05;
+      if (K.gift) K.gift.position.set(K.x, 0.95 + K.b.position.y + Math.sin(this.time * 4 + i) * 0.03, 0.45);
     });
-    this.go.disabled = !(this.sel.every((v) => v >= 0) && new Set(this.sel).size === 4) || !this.canAct();
+    this.go.disabled = !this.canAct();
   }
 
   onEvent(e) {
-    if (e.e === 'round') { this.sel = [-1, -1, -1, -1]; this.kids.forEach((K) => { K.g = -2; }); this.refresh(); }
+    if (e.e === 'round') { this.cell = [...Array(this.n)].map(() => Array(this.n).fill(0)); this.kids.forEach((K) => { K.g = -2; }); this.fb.textContent = ''; this.refresh(); }
     return this.common(e);
   }
 
   status(s) { return s ? this.base(s) : ''; }
-  hint() { return t('hint.gifts', 'Read the clues, give each kid one gift (tap the buttons, or tap a kid), then CHECK. A wrong answer freezes you for a few seconds!'); }
+  hint() { return t('hint.gifts2', 'Tap a cell once for ✓ (got it) and again for ✗ (ruled out) — use ✗ as notes. Give every kid a ✓ gift, then CHECK!'); }
 }
 
 // ============================================================ Logic cake
@@ -131,19 +165,35 @@ export class CakeView extends PartyBase {
     this.L = [-1, -1, -1]; this.K = [-1, -1, -1]; this.S = -1;
     this.cp.op.textContent = '';
     const cyc = (k, i) => `<button class="cyc" data-k="${k}" data-i="${i}" style="width:auto;min-width:64px;padding:0 6px;font-size:15px"></button>`;
-    this.cp.extra.innerHTML = `<div class="pick-cols"><div><h4>${t('cake.layers', 'Layers')}</h4>${[2, 1, 0].map((i) => `<div class="pick-row"><span>${lpos(i)}</span>${cyc('L', i)}${btn('⭐', 'st', `data-i="${i}"`)}</div>`).join('')}</div><div><h4>${t('cake.candles', 'Candles')}</h4>${[0, 1, 2].map((i) => `<div class="pick-row"><span>${kpos(i)}</span>${cyc('K', i)}</div>`).join('')}</div></div><button class="clue-go" disabled>✓ ${t('btn.check', 'CHECK')}</button>`;
+    this.cp.extra.innerHTML = `<div class="pick-cols"><div><h4>${t('cake.layers', 'Layers')}</h4>${[2, 1, 0].map((i) => `<div class="pick-row"><span>${lpos(i)}</span>${cyc('L', i)}${btn('⭐', 'st', `data-i="${i}"`)}</div>`).join('')}</div><div><h4>${t('cake.candles', 'Candles')}</h4>${[0, 1, 2].map((i) => `<div class="pick-row"><span>${kpos(i)}</span>${cyc('K', i)}</div>`).join('')}</div></div><div class="clue-fb"></div><button class="clue-go">✓ ${t('btn.check', 'CHECK')}</button>`;
     this.cycs = [...this.cp.extra.querySelectorAll('.cyc')];
     this.cycs.forEach((b) => b.addEventListener('click', () => this.cycle(b.dataset.k, +b.dataset.i)));
     this.stars = [...this.cp.extra.querySelectorAll('.st')];
     this.stars.forEach((b) => b.addEventListener('click', () => { if (!this.canAct()) return; this.S = this.S === +b.dataset.i ? -1 : +b.dataset.i; sfx.click(); this.refresh(); }));
     this.go = this.cp.extra.querySelector('.clue-go');
-    this.go.addEventListener('click', () => { if (!this.go.disabled) this.send({ t: 'i', L: this.L.slice(), K: this.K.slice(), star: this.S }); });
+    this.fb = this.cp.extra.querySelector('.clue-fb');
+    // CHECK always answers: either it sends the cake, or it says exactly what's still missing
+    this.go.addEventListener('click', () => {
+      if (!this.canAct()) return;
+      const miss = this.missing();
+      if (miss) { this.fb.textContent = miss; this.fb.classList.add('warn'); sfx.error(); return; }
+      this.fb.textContent = ''; this.send({ t: 'i', L: this.L.slice(), K: this.K.slice(), star: this.S });
+    });
     this.refresh();
     this.placeCam();
   }
 
   placeCam() { this.fit(2.5, 1.5, 0, 2.0, 0.35); }
   canAct() { const s = this.last; return s && s.ph === 'play' && !s.rd && !(s.lk > 0); }
+
+  missing() {
+    if (this.L.some((v) => v < 0)) return t('cake.m.layer', 'Pick a flavour for every layer');
+    if (new Set(this.L).size < 3) return t('cake.m.layerDup', 'Each layer needs a different flavour');
+    if (this.K.some((v) => v < 0)) return t('cake.m.candle', 'Pick a colour for every candle');
+    if (new Set(this.K).size < 3) return t('cake.m.candleDup', 'Each candle needs a different colour');
+    if (this.S < 0) return t('cake.m.star', 'Put the ⭐ on one of the layers');
+    return '';
+  }
 
   cycle(k, i) {
     if (!this.canAct()) return;
@@ -160,8 +210,9 @@ export class CakeView extends PartyBase {
       b.classList.toggle('on', v >= 0); b.classList.toggle('dup', dup);
     });
     this.stars.forEach((b) => b.classList.toggle('on', +b.dataset.i === this.S));
-    const ok = this.L.every((v) => v >= 0) && new Set(this.L).size === 3 && this.K.every((v) => v >= 0) && new Set(this.K).size === 3 && this.S >= 0;
-    this.go.disabled = !ok || !this.canAct();
+    if (this.fb && this.fb.classList.contains('warn') && !this.missing()) { this.fb.textContent = ''; this.fb.classList.remove('warn'); }
+    this.go.disabled = !this.canAct();
+    this.go.classList.toggle('soft', !!this.missing());
   }
 
   pointer(type, ev) {
@@ -198,6 +249,7 @@ export class CakeView extends PartyBase {
     const s = sample?.b; if (!s) return;
     const first = !this.last; this.last = s;
     if (first) this.refresh();
+    if (s.fb && s.fb.join() !== this.lastFb) { this.lastFb = s.fb.join(); this.fb.classList.remove('warn'); this.fb.textContent = t('cake.fb', 'Your cake follows {a} of {n} rules', { a: s.fb[0], n: s.fb[1] }); }
     this.setClues(s.c.map((c) => ({ html: this.clue(c) })));
     const [L, K, S] = s.ans || [this.L, this.K, this.S];
     this.layers.forEach((m, i) => {
@@ -211,11 +263,11 @@ export class CakeView extends PartyBase {
     });
     this.star.visible = S >= 0;
     if (S >= 0) this.star.position.set(1.35, 1.4 + S * 0.56, 0.9);
-    this.go.disabled = !(this.L.every((v) => v >= 0) && new Set(this.L).size === 3 && this.K.every((v) => v >= 0) && new Set(this.K).size === 3 && this.S >= 0) || !this.canAct();
+    this.go.disabled = !this.canAct();
   }
 
   onEvent(e) {
-    if (e.e === 'round') { this.L = [-1, -1, -1]; this.K = [-1, -1, -1]; this.S = -1; this.refresh(); }
+    if (e.e === 'round') { this.L = [-1, -1, -1]; this.K = [-1, -1, -1]; this.S = -1; this.lastFb = ''; if (this.fb) this.fb.textContent = ''; this.refresh(); }
     return this.common(e);
   }
 
@@ -439,8 +491,8 @@ export class ThiefView extends PartyBase {
     this.n = n;
     this.sus = [...Array(n).keys()].map((i) => {
       const x = (i - (n - 1) / 2) * 1.4, z = -0.4 - Math.abs(i - (n - 1) / 2) * -0.15;
-      const b = guest(ANI_COL[i], 0.45); b.position.set(x, 0, z); b.rotation.y = -x * 0.08; this.stage.world.add(b);
-      const tag = nameTag(`${ANI_EMO[i]} ${aniName(i)}`, 1.55); tag.scale.multiplyScalar(1.3); tag.position.x = x; tag.position.z = z; this.stage.world.add(tag);
+      const b = makeAnimal(i, 1.05); b.position.set(x, 0, z); b.rotation.y = -x * 0.08; this.stage.world.add(b);
+      const tag = nameTag(`${ANI_EMO[i]} ${aniName(i)}`, 1.85); tag.scale.multiplyScalar(1.3); tag.position.x = x; tag.position.z = z; this.stage.world.add(tag);
       const hit = new THREE.Mesh(new THREE.BoxGeometry(1.2, 2, 1.2), new THREE.MeshBasicMaterial({ visible: false })); hit.position.set(x, 1, z); hit.userData.sus = i; this.stage.world.add(hit);
       return { b, tag, hit, x: null, px: x, pz: z };
     });
@@ -477,10 +529,17 @@ export class ThiefView extends PartyBase {
     this.sus.forEach((S, i) => {
       const on = i === this.sel, guilty = s.T === i;
       S.b.position.y = (on || guilty ? Math.abs(Math.sin(this.time * 8)) * 0.18 : Math.abs(Math.sin(this.time * 2 + i)) * 0.04);
-      if (accused.has(i) && !S.x) { S.x = sprite('❌', 0.7); S.x.position.set(S.px, 2.15, S.pz); this.stage.world.add(S.x); }
-      if (guilty && !S.crumb) { S.crumb = sprite('🍰', 0.8, '#fff4e6'); S.crumb.position.set(S.px, 2.2, S.pz); this.stage.world.add(S.crumb); }
-      if (!guilty && S.crumb) { this.stage.world.remove(S.crumb); S.crumb = null; }
+      if (accused.has(i) && !S.x) { S.x = sprite('❌', 0.7); S.x.position.set(S.px, 2.45, S.pz); this.stage.world.add(S.x); }
+      // the culprit: cake crumbs all over its face, a guilty little jump and the stolen slice
+      if (guilty && !S.crumb) { S.crumb = sprite('🍰', 0.8, '#fff4e6'); S.crumb.position.set(S.px, 2.5, S.pz); this.stage.world.add(S.crumb); S.crumbs = addCrumbs(S.b); }
+      if (!guilty && S.crumb) { this.stage.world.remove(S.crumb); S.crumb = null; if (S.crumbs) { S.crumbs.parent?.remove(S.crumbs); S.crumbs = null; } }
       S.b.scale.setScalar(on ? 1.12 : 1);
+      const ud = S.b.userData;
+      if (ud.head) {
+        ud.head.rotation.z = accused.has(i) && !guilty ? 0.25 : Math.sin(this.time * 1.5 + i) * 0.06; // wrongly accused: offended head tilt
+        ud.head.rotation.x = accused.has(i) && !guilty ? 0.2 : 0;
+        if (ud.tail) ud.tail.rotation.z = Math.sin(this.time * (guilty ? 14 : 3) + i) * (guilty ? 0.5 : 0.2);
+      }
     });
     this.go.disabled = this.sel < 0 || s.ph !== 'play' || !!s.out || s.lk > 0 || s.rd;
   }
@@ -540,7 +599,7 @@ export class PartyOrderView extends PartyBase {
     this.go = this.cp.extra.querySelector('.clue-go');
     this.go.addEventListener('click', () => { if (!this.go.disabled) { this.send({ t: 'i', o: this.ord.slice() }); this.sel = -1; this.drawRow(); } });
     this.row.addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) this.tap(+b.dataset.i); });
-    this.fit(4.3, 1.3, 0, 1.4, 0.32);
+    this.fit(3.2, 1.3, 0, 1.4, 0.32);
   }
 
   build(n) {
@@ -551,14 +610,14 @@ export class PartyOrderView extends PartyBase {
     for (let i = n - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [this.ord[i], this.ord[j]] = [this.ord[j], this.ord[i]]; }
     this.nums = [...Array(n).keys()].map((p) => { const m = sprite(String(p + 1), 0.45, '#fff4e6'); m.position.set(this.slotX(p), 1.05, 0.9); this.stage.world.add(m); return m; });
     this.gs = [...Array(n).keys()].map((a) => {
-      const g = makeItem(a); this.stage.world.add(g);
+      const g = makeItem(a); g.scale.setScalar(1.3); this.stage.world.add(g);
       const hit = new THREE.Mesh(new THREE.BoxGeometry(1.0, 2.2, 1.2), new THREE.MeshBasicMaterial({ visible: false })); hit.userData.who = a; this.stage.world.add(hit);
       return { g, hit, x: this.slotX(this.ord.indexOf(a)) };
     });
     this.sel = -1; this.drawRow();
   }
 
-  slotX(p) { return -3.3 + p * (6.6 / Math.max(1, this.n - 1)); }
+  slotX(p) { return (p - (this.n - 1) / 2) * 1.6; }
 
   drawRow() {
     this.row.innerHTML = this.ord.map((a, p) => `<button data-i="${p}" class="${p === this.sel ? 'on' : ''}" ${ITEM_BG[a] ? `style="background:${hex(ITEM_BG[a])}33"` : ''}>${ITEM_EMO[a]}<small>${p + 1}</small></button>`).join('');

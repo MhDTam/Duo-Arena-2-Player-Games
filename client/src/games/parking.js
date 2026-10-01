@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { PALETTE, mat, roundedBox, makeIsland, bake, makeBush, makeTree } from '../scene.js';
 import { sfx } from '../audio.js';
 import { t } from '../i18n.js';
-import { LAYOUTS, LOT, CAR, bayRect } from '../../../shared/parking.js';
+import { LAYOUTS, LOT, CAR, bayRect, moverAt, insideLines, faceErr, FACE_TOL } from '../../../shared/parking.js';
 import { Steer, isTouch, lerp, angLerp } from './common.js';
 import { disposeTree, canvasTex, FONT } from './kit8.js';
 
@@ -95,6 +95,30 @@ export default class ParkingView {
     p.draw((g) => { g.fillStyle = 'rgba(255,255,255,.9)'; g.font = `900 110px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('P', 64, 70); });
     const pm = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.9), new THREE.MeshBasicMaterial({ map: p.tex, transparent: true, depthWrite: false, toneMapped: false }));
     pm.rotation.x = -Math.PI / 2; pm.rotation.z = lay.bay.ax === 'x' ? Math.PI / 2 : 0; pm.position.set(r.x, 0.095, r.z); this.layer.add(pm);
+    // painted arrow: the way the car's nose must point once parked
+    const at = canvasTex(256, 128);
+    at.draw((g) => {
+      g.fillStyle = 'rgba(255,255,255,.95)'; g.strokeStyle = 'rgba(43,45,66,.35)'; g.lineWidth = 6; g.lineJoin = 'round';
+      g.beginPath(); g.moveTo(14, 46); g.lineTo(150, 46); g.lineTo(150, 14); g.lineTo(242, 64); g.lineTo(150, 114); g.lineTo(150, 82); g.lineTo(14, 82); g.closePath(); g.stroke(); g.fill();
+    });
+    const arrow = new THREE.Group();
+    const am = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.75), new THREE.MeshBasicMaterial({ map: at.tex, transparent: true, depthWrite: false, toneMapped: false }));
+    am.rotation.x = -Math.PI / 2; arrow.add(am);
+    arrow.rotation.y = -lay.bay.face;
+    const off = 0.72; // sit the arrow towards the nose end of the bay, the P towards the back
+    arrow.position.set(r.x + Math.cos(lay.bay.face) * off * 0.6, 0.1, r.z + Math.sin(lay.bay.face) * off * 0.6);
+    pm.position.x -= Math.cos(lay.bay.face) * off; pm.position.z -= Math.sin(lay.bay.face) * off;
+    pm.scale.setScalar(0.7);
+    this.layer.add(arrow); this.arrow = am;
+    // cars driving across the lot (plus a dashed lane so you can see where they go)
+    this.movers = (lay.mv || []).map((m, k) => {
+      for (let x = Math.min(m.x1, m.x2) - 0.6; x <= Math.max(m.x1, m.x2) + 0.6; x += 0.7) { const d = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.02, 0.07), mat(0xffd43b, { roughness: 0.6 })); d.position.set(x, 0.086, m.z); this.layer.add(d); }
+      const c = makeCar([0xff8787, 0x9775fa][k % 2]); this.layer.add(c);
+      const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffa94d, toneMapped: false })); beacon.position.set(-0.2, 0.98, 0); c.add(beacon);
+      c.userData.m = m; c.userData.beacon = beacon;
+      return c;
+    });
+    this.lay = lay;
     this.r = r;
   }
 
@@ -132,6 +156,16 @@ export default class ParkingView {
       car.userData.body.material.emissive?.setHex(this.flash[i] > 0.5 && Math.sin(this.time * 30) > 0 ? 0xff0000 : 0x000000);
       car.userData.body.material.emissiveIntensity = 0.5;
     });
+    // moving cars follow the shared round clock
+    const tt = lerp(a.tt ?? s.tt ?? 0, s.tt ?? 0, k);
+    this.movers?.forEach((c) => {
+      const o = moverAt(c.userData.m, tt);
+      c.position.set(o.x, 0, o.z);
+      c.rotation.y = o.dir > 0 === c.userData.m.x2 > c.userData.m.x1 ? 0 : Math.PI;
+      c.userData.wheels.forEach((w) => { w.children[0].rotation.y += dt * 6; });
+      c.userData.beacon.visible = Math.sin(this.time * 9) > 0;
+    });
+    if (this.arrow) this.arrow.material.opacity = 0.75 + Math.sin(this.time * 4) * 0.2;
     // hold-still ring over my car while it's inside the bay
     const me = s.c[this.slot];
     const hold = Math.min(1, me[6] / 0.45);
@@ -154,10 +188,18 @@ export default class ParkingView {
       const c = this.cars[e.slot].position.clone().add(new THREE.Vector3(0, 1, 0));
       this.stage.fx.burst(c, [0x69db7c, 0xffffff, 0xffd43b, PCOL[e.slot]], 40, 1.2, { confetti: true, up: 4 });
       sfx.horn(); sfx.goal(mine);
-      return { toast: mine ? t('park.you', 'Perfectly parked! 🅿️') : t('park.them', 'Your rival parked first') };
+      if (!mine) return { toast: t('park.them', 'Your rival parked first') };
+      const p = e.p ?? 0;
+      return { toast: p >= 85 ? t('park.perfect', 'Perfect park! 🅿️ {p}% precise', { p }) : t('park.youP', 'Parked! 🅿️ {p}% precise', { p }) };
     }
     if (e.e === 'timeup') return { toast: t('park.time', 'Time! Nobody parked') };
-    if (e.e === 'round' && e.n > 1) { sfx.whistle(); return { toast: t('park.new', 'New car park! Round {n}', { n: e.n }) }; }
+    if (e.e === 'round') {
+      const lay = LAYOUTS[e.l] || {};
+      const tip = lay.par ? t('park.par', '↔️ Parallel parking! Reverse into the gap') : lay.rwp ? t('park.rev', '↩️ Back in! Nose must follow the arrow') : lay.mv ? t('park.traffic', '🚗 Watch the traffic!') : '';
+      if (e.n > 1) sfx.whistle();
+      if (e.n > 1 || tip) return { toast: [e.n > 1 ? t('park.new', 'New car park! Round {n}', { n: e.n }) : '', tip].filter(Boolean).join(' · ') };
+      return null;
+    }
     return null;
   }
 
@@ -165,10 +207,12 @@ export default class ParkingView {
     if (!s) return '';
     if (s.rd) return t('park.ready', 'Get ready…');
     if (s.ph !== 'play') return '';
+    const c = s.c[this.slot], lay = LAYOUTS[s.l];
+    if (lay) { const car = { x: c[0], z: c[1], a: c[2] }; if (insideLines(car, lay) && faceErr(car, lay) > FACE_TOL) return t('park.wrongWay', '↩️ Wrong way — follow the arrow'); }
     return `⏱ ${s.t}${s.b[this.slot] ? ` · 💥 ${s.b[this.slot]}` : ''}`;
   }
 
-  hint() { return isTouch() ? t('hint.parkTouch', 'Drag the stick: up = drive, down = reverse, sideways = steer. Stop inside the green bay!') : t('hint.park', 'Arrows / WASD: ↑ drive, ↓ reverse, ← → steer. Stop inside the green bay!'); }
+  hint() { return isTouch() ? t('hint.parkTouch', 'Drag the stick: up = drive, down = reverse, sideways = steer. Stop inside the green bay, nose along the arrow!') : t('hint.park', 'Arrows / WASD: ↑ drive, ↓ reverse, ← → steer. Stop inside the green bay, nose along the arrow!'); }
 
   dispose() { this.steer.dispose(); }
 }

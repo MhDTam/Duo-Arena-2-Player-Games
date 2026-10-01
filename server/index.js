@@ -179,7 +179,7 @@ function tickRoom(room) {
   if (room.demoBot && room.state === 'playing') room.demoBot.tick(DT);
   room.sim.step(DT);
   room.tick++;
-  if (room.tick % SNAP_EVERY === 0) {
+  if (room.tick % (room.sim.snapEvery || SNAP_EVERY) === 0) {
     const ev = room.sim.events.splice(0);
     if (room.sim.snapshotFor) room.players.forEach((p, slot) => send(p, { t: 's', k: room.tick, s: room.sim.snapshotFor(slot), e: ev.length ? ev : undefined }));
     else broadcast(room, { t: 's', k: room.tick, s: room.sim.snapshot(), e: ev.length ? ev : undefined });

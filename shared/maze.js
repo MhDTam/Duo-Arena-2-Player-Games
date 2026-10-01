@@ -56,6 +56,7 @@ export function stepWalker(w, dt, speed, open) {
     const atCentre = Math.abs(w.x - cx) < 1e-4 && Math.abs(w.y - cy) < 1e-4;
     if (atCentre) {
       w.x = cx; w.y = cy;
+      if (w.want === -2) { w.dir = -1; return; } // asked to stop at this cell
       // U-turns are always allowed; otherwise turn when the wanted way is open
       if (w.want >= 0 && open(cx + DIR4[w.want][0], cy + DIR4[w.want][1])) w.dir = w.want;
       else if (w.dir >= 0 && !open(cx + DIR4[w.dir][0], cy + DIR4[w.dir][1])) w.dir = -1;

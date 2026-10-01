@@ -3,7 +3,7 @@
 // of the puzzle so your rival gets a chance (pick games).
 import { GIFTS, CAKE, BALLOON, CHAIN as CH, THIEF, PARTY } from '../../shared/games.js';
 import { newSeed } from '../../shared/rng.js';
-import { makeGifts, makeCake, makeBalloons, makeChain, makeThief, makeOrder } from '../../shared/logic.js';
+import { makeGifts, makeCake, makeBalloons, makeChain, makeThief, makeOrder, cakeClueTrue } from '../../shared/logic.js';
 
 class RaceBase {
   constructor(C) {
@@ -67,25 +67,29 @@ class RaceBase {
 // Whose gift? submit a full person → gift assignment
 export class GiftsSim extends RaceBase {
   constructor() { super(GIFTS); }
-  make(seed) { return makeGifts(seed); }
+  make(seed, round) { return makeGifts(seed, round === 1 ? 3 : 4); } // 3 kids first, then 4
   onInput(slot, m) {
-    if (!this.canAct(slot) || !Array.isArray(m.a) || m.a.length !== 4) return;
+    if (!this.canAct(slot) || !Array.isArray(m.a) || m.a.length !== this.pz.n) return;
     const a = m.a.map((v) => v | 0);
     if (a.join() === this.pz.gift.join()) this.win(slot); else this.wrong(slot, false);
   }
-  snapshotFor(slot) { return { ...this.base(slot), c: this.pz.clues, ans: this.phase === 'over' ? this.pz.gift : null }; }
+  snapshotFor(slot) { return { ...this.base(slot), c: this.pz.clues, k: this.pz.n, ans: this.phase === 'over' ? this.pz.gift : null }; }
 }
 
 // Logic cake: submit layers, candles and the star's layer
 export class CakeSim extends RaceBase {
   constructor() { super(CAKE); }
-  make(seed) { return makeCake(seed); }
+  make(seed, round) { return makeCake(seed, [6, 7, 8][Math.min(2, round - 1)]); } // fewer clues to read early on
+  setup() { this.fb = [null, null]; }
   onInput(slot, m) {
     if (!this.canAct(slot) || !Array.isArray(m.L) || !Array.isArray(m.K) || typeof m.star !== 'number') return;
     const ok = m.L.join() === this.pz.L.join() && m.K.join() === this.pz.K.join() && m.star === this.pz.star;
+    // how many of the order's rules this cake already follows
+    const L = m.L.map((v) => v | 0), K = m.K.map((v) => v | 0);
+    this.fb[slot] = [this.pz.clues.filter((c) => cakeClueTrue(c, L, K, m.star | 0)).length, this.pz.clues.length];
     if (ok) this.win(slot); else this.wrong(slot, false);
   }
-  snapshotFor(slot) { return { ...this.base(slot), c: this.pz.clues, ans: this.phase === 'over' ? [this.pz.L, this.pz.K, this.pz.star] : null }; }
+  snapshotFor(slot) { return { ...this.base(slot), c: this.pz.clues, fb: this.fb[slot], ans: this.phase === 'over' ? [this.pz.L, this.pz.K, this.pz.star] : null }; }
 }
 
 // Lying balloons: pop one — the wrong one sits you out
@@ -144,7 +148,7 @@ export class ThiefSim extends RaceBase {
 // ends as soon as the result can't change any more.
 export class PartySim extends RaceBase {
   constructor() { super(PARTY); }
-  make(seed, round) { return makeOrder(seed, round >= 3 ? 6 : 5); }
+  make(seed, round) { return makeOrder(seed, round >= 3 ? 5 : 4); } // 4 things, 5 in the deciding round
   setup() { this.fb = [null, null]; this.solved = [-1, -1]; this.first = -1; }
   canAct(slot) { return super.canAct(slot) && this.solved[slot] < 0; }
   onInput(slot, m) {

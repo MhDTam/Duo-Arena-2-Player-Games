@@ -13,6 +13,7 @@ import { TRACK, N as TRACK_N } from '../shared/kart.js';
 import { SPIRAL } from './games/bomber.js';
 import { BOTS2 } from './bots2.js';
 import { BOTS3 } from './bots3.js';
+import { BOTS4 } from './bots4.js';
 
 const R = Math.random;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -44,7 +45,9 @@ const BOTS = {
       const k = sim.puck, p = sim.paddles[slot];
       const onMySide = s > 0 ? k.z > -0.2 : k.z < 0.2;
       let tx, tz;
-      if (onMySide) {
+      const pinned = s * k.z > hl - AIR_HOCKEY.paddleR - 0.2; // against my own end rail: can't get behind it
+      if (onMySide && pinned) { tx = k.x + (k.x > 0 ? -1.3 : 1.3); tz = s * (hl - AIR_HOCKEY.paddleR - 0.6); } // wait beside it until it drifts back out
+      else if (onMySide) {
         const behind = s > 0 ? p.z > k.z + 0.2 : p.z < k.z - 0.2;
         if (behind) { tx = k.x + gauss() * noise * 0.4; tz = k.z - s * 0.8; } // strike through toward their goal
         else { tx = k.x + (k.x > p.x ? -0.9 : 0.9); tz = k.z + s * 0.9; } // go around the puck
@@ -806,7 +809,7 @@ const BOTS = {
   },
 };
 
-Object.assign(BOTS, BOTS2, BOTS3);
+Object.assign(BOTS, BOTS2, BOTS3, BOTS4);
 
 // Turn-based helper: waits a "thinking" delay on our turn, then plays the chosen move once.
 function turnBased(sim, slot, decide, base = 1.0) {

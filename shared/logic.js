@@ -18,34 +18,38 @@ export function giftClueTrue(c, gift, wrap) { // gift[p] = g, wrap[g] = colour
     default: return false;
   }
 }
-export function makeGifts(seed) {
+const PN = { 3: perms([0, 1, 2]), 4: P4 };
+export function makeGifts(seed, n = 4) {
   const rnd = mulberry(seed);
   const { pick, ri } = tools(rnd);
+  const PP = PN[n];
   for (;;) {
-    const gift = pick(P4), wrap = pick(P4);
+    const gift = pick(PP), wrap = pick(PP);
     const clues = [];
     const count = () => {
       const sols = new Set();
-      for (const g of P4) for (const w of P4) if (clues.every((c) => giftClueTrue(c, g, w))) sols.add(g.join(''));
+      for (const g of PP) for (const w of PP) if (clues.every((c) => giftClueTrue(c, g, w))) sols.add(g.join(''));
       return sols.size;
     };
     for (let k = 0; k < 40 && count() > 1; k++) {
       const t = pick(['npg', 'npg', 'ngc', 'ngc', 'npc', 'npc', 'gc', 'pc', 'pg', 'gg']);
       let c;
-      if (t === 'pg') { const p = ri(0, 3); c = [t, p, gift[p]]; }
-      else if (t === 'npg') { const p = ri(0, 3); let g; do { g = ri(0, 3); } while (g === gift[p]); c = [t, p, g]; }
-      else if (t === 'gc') { const g = ri(0, 3); c = [t, g, wrap[g]]; }
-      else if (t === 'ngc') { const g = ri(0, 3); let col; do { col = ri(0, 3); } while (col === wrap[g]); c = [t, g, col]; }
-      else if (t === 'pc') { const p = ri(0, 3); c = [t, p, wrap[gift[p]]]; }
-      else if (t === 'npc') { const p = ri(0, 3); let col; do { col = ri(0, 3); } while (col === wrap[gift[p]]); c = [t, p, col]; }
-      else { const p = ri(0, 2); c = [t, gift[p], gift[p + 1]]; }
+      const M = n - 1;
+      if (t === 'pg') { const p = ri(0, M); c = [t, p, gift[p]]; }
+      else if (t === 'npg') { const p = ri(0, M); let g; do { g = ri(0, M); } while (g === gift[p]); c = [t, p, g]; }
+      else if (t === 'gc') { const g = ri(0, M); c = [t, g, wrap[g]]; }
+      else if (t === 'ngc') { const g = ri(0, M); let col; do { col = ri(0, M); } while (col === wrap[g]); c = [t, g, col]; }
+      else if (t === 'pc') { const p = ri(0, M); c = [t, p, wrap[gift[p]]]; }
+      else if (t === 'npc') { const p = ri(0, M); let col; do { col = ri(0, M); } while (col === wrap[gift[p]]); c = [t, p, col]; }
+      else { const p = ri(0, M - 1); c = [t, gift[p], gift[p + 1]]; }
       if (!clues.some((o) => o.join() === c.join())) clues.push(c);
     }
     if (count() !== 1) continue;
     // drop clues that aren't needed
     for (let i = clues.length - 1; i >= 0; i--) { const c = clues.splice(i, 1)[0]; if (count() !== 1) clues.splice(i, 0, c); }
-    if (clues.length < 4 || clues.length > 8 || clues.some((c) => c[0] === 'pg') && clues.length < 5) continue;
-    return { clues: tools(rnd).shuffle(clues), gift, wrap };
+    if (n === 4 && (clues.length < 4 || clues.length > 8 || clues.some((c) => c[0] === 'pg') && clues.length < 5)) continue;
+    if (n === 3 && (clues.length < 3 || clues.length > 5)) continue;
+    return { clues: tools(rnd).shuffle(clues), gift, wrap, n };
   }
 }
 
@@ -70,7 +74,7 @@ export function cakeClueTrue(c, L, K, star) {
     default: return false;
   }
 }
-export function makeCake(seed) {
+export function makeCake(seed, maxClues = 8) {
   const rnd = mulberry(seed);
   const { pick, ri } = tools(rnd);
   for (;;) {
@@ -100,7 +104,7 @@ export function makeCake(seed) {
     }
     if (count() !== 1) continue;
     for (let i = clues.length - 1; i >= 0; i--) { const c = clues.splice(i, 1)[0]; if (count() !== 1) clues.splice(i, 0, c); }
-    if (clues.length < 4 || clues.length > 8) continue;
+    if (clues.length < 4 || clues.length > maxClues) continue;
     return { clues: tools(rnd).shuffle(clues), L, K, star };
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "duo-arena",
-  "version": "0.9.0",
+  "version": "0.12.0",
   "private": true,
   "type": "module",
   "description": "Online 2-player mini games (three.js web + Android via Capacitor)",
@@ -20,6 +20,7 @@
     "@capacitor/haptics": "^7.0.5",
     "@capacitor/splash-screen": "^7.0.5",
     "@capacitor/status-bar": "^7.0.6",
+    "planck": "^1.4.2",
     "three": "^0.170.0",
     "ws": "^8.18.0"
   },

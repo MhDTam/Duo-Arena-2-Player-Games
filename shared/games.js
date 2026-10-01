@@ -50,15 +50,36 @@ export const SHADOW = { winScore: 5 };
 export const SPOT = { winRounds: 2, diffs: 5, lock: 1.2, cols: 6, rows: 5, cell: 0.95 };
 export const STACK = { winRounds: 2, time: 75, size: 3, block: 0.5, perfect: 0.08 };
 export const PARK = { winRounds: 3, time: 60, carL: 1.9, carW: 1.0 };
-export const HEIST = { size: 13, movers: 6, swap: 3.2, speed: 3.4, winRounds: 3 };
-export const ROOTS = { w: 11, h: 19, gates: 8, swap: 3.6, speed: 3.6, winRounds: 3 };
-export const BRACES = { n: 7, lockT: 1.0, drift: 2.4, winRounds: 3 };
-export const BRUSH = { teeth: 12, start: 3, spawn: 1.7, split: 7, scrub: 0.3, reach: 0.6, cost: 5, gang: 3, max: 16, time: 40, winRounds: 2 };
-export const CAVITY = { lanes: 5, cols: 9, nerveCol: 4, time: 60, nerve: 5, startEnamel: 8, maxEnamel: 14, regen: 1.0, fillCost: 2, zapCost: 4, fillHp: 4, zapHp: 2, zapEvery: 0.8, zapRange: 4, winRounds: 2 };
-export const TCANNON = { half: 10, r: 0.32, tr: 0.45, wallW: 0.7, vMin: 6, vMax: 17, reload: 1.1, penalty: 1.8, winRounds: 2 };
-export const BRACEWAR = { hw: 4.2, hd: 6.4, pieces: 6, r: 0.32, reach: 3.2, force: 26, damp: 2.6, maxV: 7, kickCd: 3, winRounds: 2 };
-export const BALANCE = { half: 3.2, limit: 7.5, shrink: 0.18, turnTime: 10, winRounds: 2 };
-export const SMILE = { n: 8, kinds: 10, study: 5, time: 60, peekT: 1.5, peekFreeze: 2.5, winRounds: 3 };
+export const HEIST = { size: 17, movers: 4, swap: 3.6, speed: 3.3, carry: 0.82, time: 100, winRounds: 2, view: 3.6, stun: 1.3, immune: 1.4, spikes: 3, spikeUp: 1.1, spikeCycle: 3.2 };
+export const CAVITY = {
+  lanes: 5, cols: 9, nerveCol: 4, time: 60, nerve: 5, startEnamel: 8, maxEnamel: 14, regen: 1.0, winRounds: 2, maxLv: 3,
+  // f: filling (a wall), z: fluoride zapper (shoots), i: mint freezer (slows germs near it)
+  cost: { f: 2, z: 4, i: 3 }, upCost: { f: 2, z: 3, i: 2 },
+  fillHp: [4, 7, 10], zapHp: 2, iceHp: 2,
+  zapEvery: [0.8, 0.6, 0.45], zapDmg: [1, 1, 2], zapRange: 4,
+  iceRange: [2.2, 2.8, 3.4], iceSlow: [0.55, 0.42, 0.3],
+  // germ types: 0 normal, 1 fast, 2 tank, 3 splitter (pops into two minis), 4 mini
+  germ: [{ hp: 1, sp: 1 }, { hp: 0.5, sp: 1.75 }, { hp: 2.6, sp: 0.6 }, { hp: 1.1, sp: 0.9 }, { hp: 0, sp: 1.35 }],
+  preview: 6,
+};
+export const TCANNON = { half: 13, vMin: 7, vMax: 18.5, reload: 1.5, ammo: [99, 2, 3], wind: 2.6, windEvery: 8, time: 80, winRounds: 2 };
+export const BRACEWAR = { hw: 4.2, hd: 6.4, pieces: 6, r: 0.32, reach: 3.2, force: 26, damp: 2.6, maxV: 7, kickCd: 3, winRounds: 2, rest: 0.7, superT: 5, superEvery: 10, superForce: 1.8, superReach: 1.4 };
+export const BALANCE = { plankW: 6.4, plankH: 0.3, pivotY: 2.2, tip: 0.36, tipHold: 0.45, spring: 260, damp: 70, limit: 0.62, pieces: 10, turnTime: 9, drops: 3, settle: 2.6, winRounds: 2 };
+// ---- v0.11 (Phase 3)
+export const PROPHUNT = { study: 6, hide: 12, hunt: 40, misses: 3, rustle: 10, reveal: 3.4, winRounds: 3 };
+export const ARCHERY = { dist: 14, tR: 0.8, cy: 1.35, lane: 1.7, arrows: 3, setWin: 4, shotT: 12, drawT: 0.85, steady: 2.6, flight: 0.55, minHold: 0.35, windMax: 0.3, moveFrom: 2, moveAmp: 0.75, moveW: 1.1, aimMax: 1.6 };
+export const TOOLS = { tile: 2.6, gap: 0.14, dropT: 1.6, upT: 1.0, winRounds: 3 };
+export const SNOW = { hw: 6.5, hd: 5.2, speed: 4.2, hp: 3, ammo: 3, reload: 1.1, wallsMax: 2, wallHp: 3, charge: 1.1, minD: 3.5, maxD: 11, g: 14, r: 0.16, winRounds: 2 };
+export const CURLING = { hw: 2.3, hack: 10, house: -8, back: -10.6, hog: -3.6, rr: 0.29, houseR: 1.83, stones: 3, ends: 2, mu: 0.52, muSweep: 0.32, curl: 0.06, vMin: 2.6, vMax: 6.2, aim: 0.09, turnT: 20 };
+export const BOXING = { hp: 100, st: 100, time: 60, jab: [0.3, 6, 13], upper: [0.6, 17, 28], recover: 0.28, dodgeT: 0.45, dodgeCd: 0.3, regen: 20, blockDrain: 6, winRounds: 2 };
+export const RUNNER = { len: 300, speed: 10, laneW: 1.3, trackX: 2.6, jumpT: 0.62, slideT: 0.7, stun: 1.0, boostT: 2.5, winRounds: 2 };
+export const PAINT = { n: 20, cell: 0.6, time: 60, speed: 4.6, dashCd: 2.2, puEvery: 4, puMax: 3, bombR: 2.4, boostT: 4, wideT: 5, freezeT: 1.5, trapT: 1.2, trapR: 1.6, rocketW: 0.75 };
+export const HOOPS = { time: 60, laneX: 1.8, dist: 4.3, rimY: 3.05, rimR: 0.24, tube: 0.025, r: 0.125, boardOff: 0.36, vMin: 5.6, vMax: 10.2, elev: 0.96, aimMax: 0.15, reload: 0.5, moveAfter: 30, moveAmp: 0.85, movePer: 4.2, g: 9.8, winRounds: 1 };
+export const TENNIS = { hw: 4, hl: 7.2, netH: 0.95, r: 0.13, speed: 7.3, reach: 1.65, g: 9.8, winGames: 2 };
+export const JIGSAW = { cols: 4, rows: 3, lock: 0.7, winRounds: 2, scenes: 10 };
+export const CUBE = { winCards: 3, time: 60, moveT: 0.16 };
+export const FRUIT = { n: 5, tile: 2.1, gap: 0.12, fruits: 8, dropT: 1.7, upT: 1.1, winRounds: 3 };
+export const RECALL = { n: 4, study: 4, time: 45, peekT: 1.5, peekFreeze: 2.5, winRounds: 2 };
 export const GIFTS = { time: 150, lock: 5, winRounds: 2 };
 export const CAKE = { time: 150, lock: 5, winRounds: 2 };
 export const BALLOON = { time: 90, lock: 0, winRounds: 3 };
@@ -103,25 +124,35 @@ export const GAMES = [
   { id: 'stroop', name: 'Color Panic', tag: 'Party', color: '#d6336c', icon: '🎨', desc: 'Tap the INK colour, not the word! Right answers climb, mistakes stall you.' },
   { id: 'simon', name: 'Sequence Duel', tag: 'Brain', color: '#7048e8', icon: '🟢', desc: 'Watch the lights, repeat the pattern. One more each level until someone slips.' },
   { id: 'missing', name: 'What’s Missing?', tag: 'Brain', color: '#f59f00', icon: '👀', desc: 'Memorise the table. Lights out, one thing vanishes — name it first!' },
-  { id: 'shadow', name: 'Shadow Match', tag: 'Brain', color: '#343a40', icon: '🌓', desc: 'Which shadow does the block sculpture cast from above? Watch out for mirror tricks.' },
+  { id: 'shadow', name: 'Projection', tag: 'Brain', color: '#7048e8', icon: '🧊', desc: 'A cube sculpture seen from above. Imagine it from the marked side — front, right, left or top — and pick the right picture first.' },
   { id: 'spot', name: 'Spot the Difference', tag: 'Party', color: '#0c8599', icon: '🔍', desc: 'Two islands, five differences. Tap them before your rival claims them.' },
   { id: 'stack', name: 'Tower Stack', tag: 'Arcade', color: '#e64980', icon: '🧱', desc: 'Drop each sliding block on your tower. Overhangs fall off — miss and it’s over!' },
   { id: 'parking', name: 'Tiny Parking', tag: 'Action', color: '#2b8a3e', icon: '🅿️', desc: 'Park your little car in the bay without touching anything. First parked wins.' },
-  { id: 'tcannon', name: 'Tooth Cannon', tag: 'Action', color: '#4dabf7', icon: '🦷', desc: 'Sling cartoon teeth at your rival’s five numbered teeth — in order! Hit the wrong one and your cannon jams.', isNew: true },
-  { id: 'brush', name: 'Brush Battle', tag: 'Party', color: '#20c997', icon: '🪥', desc: 'Scrub the germs off your half of the mouth, then send a germ gang to your rival’s side.', isNew: true },
-  { id: 'cavity', name: 'Cavity Defense', tag: 'Brain', color: '#e8590c', icon: '🛡️', desc: 'Germs attack your tooth from above and below. Place fillings and fluoride zappers before they reach the nerve in the middle.', isNew: true },
-  { id: 'heist', name: 'Tooth Heist', tag: 'Action', color: '#fab005', icon: '👑', desc: 'Race through a maze of teeth to the golden tooth. Watch out — some teeth slide and block the way!', isNew: true },
-  { id: 'roots', name: 'Root Rush', tag: 'Action', color: '#c2255c', icon: '🌱', desc: 'Dash down the root canals to the nerve. The root gates keep switching the way.', isNew: true },
-  { id: 'braces', name: 'Magnetic Braces', tag: 'Brain', color: '#748ffc', icon: '🧲', desc: 'Tap teeth up or down to match the smile shape. They keep wobbling until a bracket locks them.', isNew: true },
-  { id: 'bracewar', name: 'Brace Wars', tag: 'Arcade', color: '#7950f2', icon: '⚡', desc: 'Drag your magnet to pull your brackets onto your teeth — and push your rival’s away.', isNew: true },
-  { id: 'smile', name: 'Build the Smile', tag: 'Brain', color: '#f783ac', icon: '😁', desc: 'Remember the perfect smile, then swap the mixed-up teeth back into place first.', isNew: true },
-  { id: 'balance', name: 'Tooth Balance', tag: 'Board', color: '#15aabf', icon: '⚖️', desc: 'Take turns placing pieces on the giant tooth. Whoever tips it over loses.', isNew: true },
-  { id: 'gifts', name: 'Whose Gift?', tag: 'Brain', color: '#e64980', icon: '🎁', desc: 'Four friends, four presents. Read the clues and match every gift to its owner first.', isNew: true },
-  { id: 'cake', name: 'Logic Cake', tag: 'Brain', color: '#f08c00', icon: '🎂', desc: 'Build the exact cake from the order: layers, candles and the star — before your rival.', isNew: true },
-  { id: 'balloon', name: 'Lying Balloons', tag: 'Brain', color: '#ff6b6b', icon: '🎈', desc: 'Each balloon says where the gift is, but some are lying. Pop the right one — a miss hands your rival a chance.', isNew: true },
-  { id: 'chain', name: 'Gift Chain', tag: 'Brain', color: '#12b886', icon: '🔗', desc: 'Every box hides a clue to the next one. Follow the chain to the final gift first.', isNew: true },
-  { id: 'thief', name: 'Who Took the Cake?', tag: 'Brain', color: '#9c36b5', icon: '🍰', desc: 'Someone ate the last slice. Some suspects are lying — work out the thief and accuse first.', isNew: true },
-  { id: 'party', name: 'Party Order', tag: 'Brain', color: '#3bc9db', icon: '🎉', desc: 'Line up the party things so every rule is true. Each check says how many are in the right spot — fewest checks wins.', isNew: true },
+  { id: 'tcannon', name: 'Castle Siege', tag: 'Action', color: '#4dabf7', icon: '🏰', desc: 'Fling stones, bombs and split-shots at your rival’s castle. Mind the wind — first to knock their crown down wins!' },
+  { id: 'cavity', name: 'Cavity Defense', tag: 'Brain', color: '#e8590c', icon: '🛡️', desc: 'Germs attack your tooth from above and below. Build and upgrade fillings, zappers and freezers before they reach the nerve.' },
+  { id: 'heist', name: 'Maze Thief', tag: 'Action', color: '#7048e8', icon: '💎', desc: 'Sneak through a dark maze, grab the gem in the middle and carry it home. Find keys for the coloured doors, dodge traps — and tag the thief to steal it back!' },
+  { id: 'bracewar', name: 'Brace Wars', tag: 'Arcade', color: '#7950f2', icon: '⚡', desc: 'Drag your magnet to pull your brackets onto your teeth, push your rival’s away and grab the super magnet ⚡.' },
+  { id: 'recall', name: 'Memory Line', tag: 'Brain', color: '#f783ac', icon: '🧠', desc: 'Four things on a shelf. Remember them, then put them back after they get mixed up — order, direction, look-alikes.' },
+  { id: 'balance', name: 'Balance Tower', tag: 'Arcade', color: '#15aabf', icon: '⚖️', desc: 'Same blocks, two seesaws, real physics. Stack them without tipping your board or dropping three — the taller tower wins.' },
+  { id: 'gifts', name: 'Whose Gift?', tag: 'Brain', color: '#e64980', icon: '🎁', desc: 'Four friends, four presents. Read the clues and match every gift to its owner first.' },
+  { id: 'cake', name: 'Logic Cake', tag: 'Brain', color: '#f08c00', icon: '🎂', desc: 'Build the exact cake from the order: layers, candles and the star — before your rival.' },
+  { id: 'balloon', name: 'Lying Balloons', tag: 'Brain', color: '#ff6b6b', icon: '🎈', desc: 'Each balloon says where the gift is, but some are lying. Pop the right one — a miss hands your rival a chance.' },
+  { id: 'chain', name: 'Gift Chain', tag: 'Brain', color: '#12b886', icon: '🔗', desc: 'Every box hides a clue to the next one. Follow the chain to the final gift first.' },
+  { id: 'thief', name: 'Who Took the Cake?', tag: 'Brain', color: '#9c36b5', icon: '🍰', desc: 'Someone ate the last slice. Some suspects are lying — work out the thief and accuse first.' },
+  { id: 'party', name: 'Party Order', tag: 'Brain', color: '#3bc9db', icon: '🎉', desc: 'Line up the party things so every rule is true. Each check says how many are in the right spot — fewest checks wins.' },
+  { id: 'fruit', name: 'Fruit Match', tag: 'Party', color: '#ff6b6b', icon: '🍓', desc: 'Remember which fruit is on each tile. When a fruit is called, stand on it before the rest of the floor drops — and shove your rival off!', isNew: true },
+  { id: 'prophunt', name: 'Prop Hunt', tag: 'Party', color: '#845ef7', icon: '🕵️', desc: 'One hides by turning into an object, the other hunts. Memorise the room first — then find the thing that wasn’t there before!', isNew: true },
+  { id: 'cube', name: 'Face Change Cube', tag: 'Brain', color: '#fab005', icon: '🎲', desc: 'Build the face on the card with your 4 cubes: swipe a cube to roll it, tap to turn it, hold and drag to swap two. Each cube holds different eyes and mouth halves — find the right one, right side up!', isNew: true },
+  { id: 'jigsaw', name: 'Puzzle', tag: 'Brain', color: '#20c997', icon: '🧩', desc: 'Race to finish the same 12-piece puzzle: drag each piece from the tray to its place. Ten scenes that change every round — no learning them by heart! Wrong spot = a short freeze.', isNew: true },
+  { id: 'tennis', name: 'Tennis', tag: 'Sports', color: '#94d82d', icon: '🎾', desc: 'Run with the stick and pick your shot: POWER (fast, risky), TOPSPIN (safe and deep) or DROP (short — or a lob if your rival rushes the net). Push the stick while you hit to aim. Hit when the ring is green; high balls near the net become smashes!', isNew: true },
+  { id: 'hoops', name: 'Basketball Shoot-out', tag: 'Sports', color: '#ff922b', icon: '🏀', desc: 'Flick the ball up to shoot. 60 seconds, your own hoop — it starts moving halfway. Three in a row puts you on fire: 3 points a basket!', isNew: true },
+  { id: 'paint', name: 'Paint Arena', tag: 'Action', color: '#cc5de8', icon: '🎨', desc: 'Run to paint the floor your colour. Grab abilities from the arena and fire them with USE: paint bomb, rocket line, freeze, speed shoes, wide brush or a hidden trap. Most colour after 60 seconds wins!', isNew: true },
+  { id: 'runner', name: 'Obstacle Runner', tag: 'Action', color: '#ff922b', icon: '🏃', desc: 'Race side by side: swipe to switch lanes, jump hurdles and slide under bars. Grab ? boxes and throw bananas onto your rival’s track!', isNew: true },
+  { id: 'boxing', name: 'Boxing', tag: 'Action', color: '#e03131', icon: '🥊', desc: 'Tap left / right to jab, swipe to dodge away from the fist, hold to block, UPPERCUT for a big hit. Watch the wind-up and save your stamina!', isNew: true },
+  { id: 'curling', name: 'Curling', tag: 'Sports', color: '#4dabf7', icon: '🥌', desc: 'Swipe to slide your stone down the ice — curve the swipe to make it curl. Rub the screen to sweep it further. Closest to the centre scores!', isNew: true },
+  { id: 'snowball', name: 'Snowball Fight', tag: 'Action', color: '#74c0fc', icon: '☃️', desc: 'Move behind the snow forts, hold THROW to wind up and let fly. Build your own wall when you need cover. Three hits and you\'re out!', isNew: true },
+  { id: 'archery', name: 'Archery', tag: 'Sports', color: '#2f9e44', icon: '🏹', desc: 'Hold to draw the bow, drag to aim, let go to shoot. Hold steady — keep it too long and your arms shake. Mind the wind, and the targets start moving!', isNew: true },
+  { id: 'tools', name: 'Tool Count', tag: 'Party', color: '#f59f00', icon: '🔨', desc: 'Tools rain down onto the floor — count them! Then stand on the tool that fell the most, the least, exactly N times… before every other tile drops. PUSH your rival off!', isNew: true },
 ];
 
 export const TICK_HZ = 60;

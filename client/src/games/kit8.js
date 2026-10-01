@@ -48,8 +48,8 @@ export const FONT = 'Nunito, "Baloo Bhaijaan 2", sans-serif';
 // Swipe (or drag, or arrow keys) to pick a direction: 0 right, 1 down, 2 left, 3 up (screen space).
 // Every 24 px of finger travel counts as a new swipe, so you can steer without lifting the finger.
 export class Swipe {
-  constructor(onDir, { step = 24 } = {}) {
-    this.onDir = onDir; this.step = step; this.a = null;
+  constructor(onDir, { step = 24, once = false } = {}) {
+    this.onDir = onDir; this.step = step; this.once = once; this.a = null;
     this.kd = (e) => {
       const d = { ArrowRight: 0, KeyD: 0, ArrowDown: 1, KeyS: 1, ArrowLeft: 2, KeyA: 2, ArrowUp: 3, KeyW: 3 }[e.code];
       if (d !== undefined) { e.preventDefault(); this.onDir(d); }
@@ -63,7 +63,7 @@ export class Swipe {
     const dx = ev.clientX - this.a[0], dy = ev.clientY - this.a[1];
     if (Math.max(Math.abs(dx), Math.abs(dy)) < this.step) return;
     this.onDir(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 0 : 2) : (dy > 0 ? 1 : 3));
-    this.a = [ev.clientX, ev.clientY];
+    this.a = this.once ? null : [ev.clientX, ev.clientY]; // once: one move per finger stroke
   }
   dispose() { window.removeEventListener('keydown', this.kd); }
 }

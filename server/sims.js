@@ -40,14 +40,24 @@ import { SpotSim } from './games/spot.js';
 import { StackSim } from './games/stack.js';
 import { ParkingSim } from './games/parking.js';
 import { HeistSim } from './games/heist.js';
-import { RootsSim } from './games/roots.js';
-import { BracesSim } from './games/braces.js';
-import { BrushSim } from './games/brush.js';
 import { CavitySim } from './games/cavity.js';
 import { TCannonSim } from './games/tcannon.js';
 import { BraceWarSim } from './games/bracewar.js';
 import { BalanceSim } from './games/balance.js';
-import { SmileSim } from './games/smile.js';
+import { RecallSim } from './games/recall.js';
+import { FruitSim } from './games/fruit.js';
+import { PropHuntSim } from './games/prophunt.js';
+import { CubeSim } from './games/cube.js';
+import { JigsawSim } from './games/jigsaw.js';
+import { TennisSim } from './games/tennis.js';
+import { HoopsSim } from './games/hoops.js';
+import { PaintSim } from './games/paint.js';
+import { RunnerSim } from './games/runner.js';
+import { BoxingSim } from './games/boxing.js';
+import { CurlingSim } from './games/curling.js';
+import { SnowballSim } from './games/snowball.js';
+import { ArcherySim } from './games/archery.js';
+import { ToolsSim } from './games/tools.js';
 import { GiftsSim, CakeSim, BalloonSim, ChainSim, ThiefSim, PartySim } from './games/partylogic.js';
 
 export const SIMS = {
@@ -59,6 +69,7 @@ export const SIMS = {
   mathtug: MathTugSim, foosball: FoosballSim, geo: GeoSim, golf: GolfSim, pool: PoolSim, racing: RacingSim, bomber: BomberSim,
   wire: WireSim, code: CodeSim, pipes: PipesSim, stroop: StroopSim, simon: SimonSim,
   missing: MissingSim, shadow: ShadowSim, spot: SpotSim, stack: StackSim, parking: ParkingSim,
-  heist: HeistSim, roots: RootsSim, braces: BracesSim, brush: BrushSim, cavity: CavitySim, tcannon: TCannonSim, bracewar: BraceWarSim,
-  balance: BalanceSim, smile: SmileSim, gifts: GiftsSim, cake: CakeSim, balloon: BalloonSim, chain: ChainSim, thief: ThiefSim, party: PartySim,
+  heist: HeistSim, cavity: CavitySim, tcannon: TCannonSim, bracewar: BraceWarSim,
+  balance: BalanceSim, recall: RecallSim, gifts: GiftsSim, cake: CakeSim, balloon: BalloonSim, chain: ChainSim, thief: ThiefSim, party: PartySim,
+  fruit: FruitSim, prophunt: PropHuntSim, cube: CubeSim, jigsaw: JigsawSim, tennis: TennisSim, hoops: HoopsSim, paint: PaintSim, runner: RunnerSim, boxing: BoxingSim, curling: CurlingSim, snowball: SnowballSim, archery: ArcherySim, tools: ToolsSim,
 };
