@@ -3,81 +3,197 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-  <meta name="theme-color" content="#fff4e8" />
+  <meta name="theme-color" content="#ffb15c" />
+  <meta name="description" content="Duo Arena — 65 two-player mini games. Play online with a friend or against a bot. Touch-first, made for phones." />
+  <meta property="og:title" content="Duo Arena: 2 Player Games" />
+  <meta property="og:description" content="65 two-player mini games — play online with a friend or against a bot." />
+  <meta property="og:image" content="icon-512.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <title>Duo Arena: 2 Player Games</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=Baloo+Bhaijaan+2:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="stylesheet" href="fonts.css" />
   <link rel="icon" type="image/png" href="icon-192.png" />
   <link rel="apple-touch-icon" href="icon-192.png" />
 </head>
-<body>
+<body class="menu">
   <canvas id="c"></canvas>
+  <div id="menuBg"><i></i><i></i><i></i></div>
   <div id="ui">
+    <!-- BOOT / SPLASH -->
+    <div id="boot">
+      <div class="boot-logo"><span class="logo big"><i></i><i></i></span></div>
+      <h1>Duo Arena</h1>
+      <div class="boot-bar"><i></i></div>
+    </div>
+
+    <!-- TOP BAR -->
     <header class="topbar">
+      <button id="profileBtn" class="me-chip" title="Profile">
+        <span id="profileAv" class="av">🙂</span>
+        <span class="me-txt"><b id="meChipName">Player</b><small><span id="lvlTxt">Lv 1</span><i class="xp"><u id="xpBar"></u></i></small></span>
+        <span id="netStatus" class="net online-only"><b></b><span>connecting…</span></span>
+      </button>
       <div class="brand"><span class="logo"><i></i><i></i></span><span data-i18n="brand">Duo Arena</span></div>
       <div class="top-right">
-        <span id="netStatus" class="pill status online-only"><b></b><span>connecting…</span></span>
+        <span class="coins"><i data-icon="coin"></i><b id="coinCount">0</b></span>
+        <button id="fsBtn" class="icon-btn fs-only" title="Full screen" data-icon="expand"></button>
         <button id="langBtn" class="icon-btn lang" title="Language">ع</button>
-        <button id="settingsBtn" class="icon-btn" title="Settings">⚙️</button>
-        <button id="profileBtn" class="pill profile-pill" title="Profile"><span id="profileAv">🙂</span><b id="coinCount">0</b>🪙</button>
-        <button id="muteBtn" class="icon-btn" title="Sound">🔊</button>
+        <button id="muteBtn" class="icon-btn" title="Sound" data-icon="sound"></button>
       </div>
     </header>
 
-    <!-- HOME -->
+    <!-- HOME / LOBBY -->
     <section id="home" class="screen">
-      <div class="hero">
-        <h1 data-i18n="hero.title">Play 2-player games<br /><span>online</span> with a friend</h1>
-        <p data-i18n="hero.sub">Quick match a stranger or send your friend a room code. No sign-up.</p>
-        <label class="name-field">
-          <span data-i18n="home.name">Your name</span>
-          <input id="nameInput" maxlength="16" placeholder="Player" data-i18n-ph="home.namePh" autocomplete="off" />
-        </label>
+      <div class="wrap">
+        <div class="hero-car">
+          <div id="heroTrack" class="hero-track"></div>
+          <div id="heroDots" class="hero-dots"></div>
+        </div>
+        <div class="actions">
+          <button id="quickAny" class="act quick online-only"><i data-icon="bolt"></i><span><b data-i18n="lobby.quick">Quick match</b><small data-i18n="lobby.quickSub">A random game vs a real player</small></span></button>
+          <button id="friendAny" class="act friend online-only"><i data-icon="link"></i><span><b data-i18n="lobby.friend">Play with a friend</b><small data-i18n="lobby.friendSub">Pick a game, send the code</small></span></button>
+          <button id="botAny" class="act bot"><i data-icon="robot"></i><span><b data-i18n="lobby.bot">Random game vs bot</b><small data-i18n="lobby.botSub">Jump straight into a match</small></span></button>
+        </div>
+        <div class="join-row online-only">
+          <i data-icon="key"></i>
+          <span data-i18n="home.gotCode">Got a code?</span>
+          <input id="codeInput" maxlength="4" placeholder="ABCD" autocomplete="off" autocapitalize="characters" />
+          <button id="joinBtn" class="btn primary" data-i18n="home.join">Join</button>
+        </div>
+        <div class="sec"><h2 data-i18n="lobby.new">New games</h2><button class="see-all" data-goto="games"><span data-i18n="lobby.all">All games</span><i data-icon="chevron"></i></button></div>
+        <div id="rowNew" class="row-scroll"></div>
+        <div class="sec"><h2 data-i18n="lobby.popular">Most played</h2></div>
+        <div id="rowHot" class="row-scroll"></div>
+        <div class="sec"><h2 data-i18n="lobby.cats">Categories</h2></div>
+        <div id="catGrid" class="cat-grid"></div>
       </div>
-      <div class="join-row card online-only">
-        <span data-i18n="home.gotCode">Got a code?</span>
-        <input id="codeInput" maxlength="4" placeholder="ABCD" autocomplete="off" />
-        <button id="joinBtn" class="btn primary" data-i18n="home.join">Join</button>
-      </div>
-      <div class="filters" id="filters"></div>
-      <div id="gameGrid" class="grid"></div>
     </section>
 
+    <!-- ALL GAMES -->
+    <section id="games" class="screen hidden">
+      <div class="wrap">
+        <div class="games-head">
+          <h1 class="page-title" data-i18n="lobby.allTitle">All games</h1>
+          <label class="search"><i data-icon="search"></i><input id="searchInput" placeholder="Search games…" data-i18n-ph="lobby.search" autocomplete="off" /></label>
+          <div class="filters" id="filters"></div>
+        </div>
+        <div id="gameGrid" class="grid"></div>
+        <p id="noGames" class="muted center hidden" data-i18n="lobby.none">No games match your search.</p>
+      </div>
+    </section>
+
+    <!-- PROFILE -->
+    <section id="profile" class="screen hidden">
+      <div class="wrap narrow">
+        <h1 class="page-title" data-i18n="prof.title">Profile</h1>
+        <div class="prof-card card">
+          <div id="profBig" class="prof-av">🙂</div>
+          <div class="prof-main">
+            <label class="name-edit"><input id="nameInput" maxlength="16" placeholder="Player" data-i18n-ph="home.namePh" autocomplete="off" /><i data-icon="edit"></i></label>
+            <div class="prof-lvl"><b id="profLvl">Lv 1</b><i class="xp"><u id="profXp"></u></i><small id="profXpTxt"></small></div>
+            <div class="prof-coins"><i data-icon="coin"></i><b id="profCoins">0</b></div>
+          </div>
+        </div>
+        <div class="stat-row">
+          <div><b id="stPlayed">0</b><span data-i18n="prof.played">Played</span></div>
+          <div><b id="stWon">0</b><span data-i18n="prof.won">Won</span></div>
+          <div><b id="stRate">0%</b><span data-i18n="prof.rate">Win rate</span></div>
+          <div><b id="stBest">0</b><span data-i18n="prof.best">Best streak</span></div>
+        </div>
+        <h3 data-i18n="prof.missions">Daily missions</h3>
+        <div id="missionList" class="missions"></div>
+        <h3 data-i18n="prof.avatar">Avatar</h3>
+        <div id="avatarGrid" class="avatar-grid"></div>
+        <h3 data-i18n="prof.games">Your games</h3>
+        <div id="gameStats" class="game-stats"></div>
+      </div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="settings" class="screen hidden">
+      <div class="wrap narrow">
+        <h1 class="page-title" data-i18n="set.title">Settings</h1>
+        <div class="set-group card">
+          <h3 data-i18n="set.gSound">Sound</h3>
+          <label class="sw-row"><i data-icon="music"></i><span data-i18n="set.music">Music</span><input type="checkbox" id="musicInput" /><b class="sw"></b></label>
+          <label class="sw-row"><i data-icon="sound"></i><span data-i18n="set.sfx">Sound effects</span><input type="checkbox" id="sfxInput" /><b class="sw"></b></label>
+          <label class="sw-row"><i data-icon="vibrate"></i><span data-i18n="set.haptics">Vibration</span><input type="checkbox" id="hapticsInput" /><b class="sw"></b></label>
+        </div>
+        <div class="set-group card">
+          <h3 data-i18n="set.gControls">Controls</h3>
+          <p class="muted small" data-i18n="set.ctlSize">Button size</p>
+          <div class="seg" id="ctlSeg"><button data-ctl="s" data-i18n="set.ctlS">Small</button><button data-ctl="m" data-i18n="set.ctlM">Normal</button><button data-ctl="l" data-i18n="set.ctlL">Large</button></div>
+          <label class="sw-row fs-only"><i data-icon="expand"></i><span data-i18n="set.autoFs">Full screen when a match starts</span><input type="checkbox" id="autoFsInput" /><b class="sw"></b></label>
+        </div>
+        <div class="set-group card">
+          <h3 data-i18n="set.gLang">Language</h3>
+          <div class="seg" id="langSeg"><button data-lang="ar">العربية</button><button data-lang="en">English</button></div>
+        </div>
+        <div class="set-group card online-only">
+          <h3 data-i18n="set.server">Game server</h3>
+          <label class="field"><input id="serverInput" placeholder="wss://play.example.com  or  192.168.1.5:8080" autocomplete="off" dir="ltr" /></label>
+          <p class="muted small" id="serverHint" data-i18n="set.serverHint">Leave empty to use the default server. On home Wi-Fi, use your PC's IP and port 8080.</p>
+          <button id="saveSettings" class="btn primary" data-i18n="set.save">Save</button>
+        </div>
+        <div class="set-group card about">
+          <span class="logo"><i></i><i></i></span>
+          <div><b data-i18n="brand">Duo Arena</b><small><span data-i18n="set.version">Version</span> <span id="verTxt"></span></small></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- BOTTOM TAB BAR (side rail on wide screens) -->
+    <nav id="tabbar" class="tabbar">
+      <button data-tab="home" class="on"><i data-icon="home"></i><span data-i18n="tab.home">Home</span></button>
+      <button data-tab="games"><i data-icon="grid"></i><span data-i18n="tab.games">Games</span></button>
+      <button data-tab="profile"><i data-icon="user"></i><span data-i18n="tab.profile">Profile</span></button>
+      <button data-tab="settings" id="settingsBtn"><i data-icon="gear"></i><span data-i18n="tab.settings">Settings</span></button>
+    </nav>
+
     <!-- GAME SHEET -->
-    <div id="sheet" class="overlay hidden">
+    <div id="sheet" class="overlay sheet-ov hidden">
       <div class="sheet card">
-        <button class="close icon-btn" data-close>✕</button>
+        <button class="close icon-btn" data-close data-icon="close"></button>
         <div class="sheet-thumb" id="sheetThumb"></div>
-        <h2 id="sheetTitle"></h2>
-        <p id="sheetDesc"></p>
-        <button id="quickBtn" class="btn primary big online-only" data-i18n="sheet.quick">⚡ Quick match</button>
-        <button id="createBtn" class="btn big online-only" data-i18n="sheet.friend">🔗 Play with a friend</button>
-        <div class="bot-row">
-          <button id="botBtn" class="btn big bot" data-i18n="sheet.bot">🤖 Play vs Bot</button>
-          <div class="levels" id="levels">
-            <button data-lvl="0" data-i18n="lvl.easy">Easy</button>
-            <button data-lvl="1" data-i18n="lvl.normal">Normal</button>
-            <button data-lvl="2" data-i18n="lvl.hard">Hard</button>
+        <div class="sheet-body">
+          <div class="sheet-tags" id="sheetTags"></div>
+          <h2 id="sheetTitle"></h2>
+          <p id="sheetDesc"></p>
+          <div class="modes">
+            <button id="quickBtn" class="btn primary big online-only"><i data-icon="bolt"></i><span data-i18n="sheet.quick2">Quick match</span></button>
+            <button id="createBtn" class="btn big online-only"><i data-icon="link"></i><span data-i18n="sheet.friend2">Play with a friend</span></button>
+            <div class="bot-row">
+              <button id="botBtn" class="btn big bot"><i data-icon="robot"></i><span data-i18n="sheet.bot2">Play vs Bot</span></button>
+              <div class="seg levels" id="levels">
+                <button data-lvl="0" data-i18n="lvl.easy">Easy</button>
+                <button data-lvl="1" data-i18n="lvl.normal">Normal</button>
+                <button data-lvl="2" data-i18n="lvl.hard">Hard</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- WAITING -->
+    <!-- WAITING ROOM -->
     <section id="waiting" class="overlay hidden">
       <div class="card wait-card">
-        <div class="spinner"><i></i><i></i></div>
+        <div class="wait-game"><span id="waitThumb" class="wt"></span><div><small data-i18n="wait.game">Game</small><b id="waitGame"></b></div></div>
         <h2 id="waitTitle"></h2>
+        <div class="slots">
+          <div class="slot me"><span id="waitMeAv" class="av">🙂</span><b id="waitMeName">You</b></div>
+          <em class="vs">VS</em>
+          <div class="slot op"><span class="av q">?</span><b data-i18n="wait.who">…</b></div>
+        </div>
         <div id="waitCodeBox">
           <p data-i18n="wait.share">Share this room code</p>
           <div id="waitCode" class="code">----</div>
           <div class="row">
-            <button id="copyBtn" class="btn" data-i18n="wait.copy">Copy link</button>
-            <button id="shareBtn" class="btn primary" data-i18n="wait.shareBtn">Share</button>
+            <button id="copyBtn" class="btn"><i data-icon="copy"></i><span data-i18n="wait.copy">Copy link</span></button>
+            <button id="shareBtn" class="btn primary"><i data-icon="share"></i><span data-i18n="wait.shareBtn">Share</span></button>
           </div>
         </div>
-        <p id="waitGame" class="muted"></p>
         <p id="waitBot" class="muted small"></p>
         <button id="cancelBtn" class="btn ghost" data-i18n="common.cancel">Cancel</button>
       </div>
@@ -86,7 +202,7 @@
     <!-- HUD -->
     <section id="hud" class="hidden">
       <div class="hud-top">
-        <button id="leaveBtn" class="icon-btn">←</button>
+        <button id="pauseBtn" class="icon-btn hud-btn" data-icon="pause" title="Menu"></button>
         <div class="scoreboard">
           <div class="player me"><b id="meName">You</b></div>
           <div class="score"><span id="meScore">0</span><em>:</em><span id="opScore">0</span></div>
@@ -105,55 +221,42 @@
       <button id="actionBtn" class="action-btn hidden"><span>DASH</span><i></i></button>
     </section>
 
+    <!-- PAUSE / MATCH MENU -->
+    <div id="pause" class="overlay hidden">
+      <div class="card pause-card">
+        <h2 data-i18n="pause.title">Menu</h2>
+        <p id="pauseNote" class="muted small"></p>
+        <button id="resumeBtn" class="btn primary big"><i data-icon="play"></i><span data-i18n="pause.resume">Resume</span></button>
+        <button id="howBtn" class="btn big"><i data-icon="help"></i><span data-i18n="pause.how">How to play</span></button>
+        <p id="howTxt" class="how hidden"></p>
+        <div class="pause-row">
+          <button id="pMusic" class="icon-btn" data-icon="music" title="Music"></button>
+          <button id="pSfx" class="icon-btn" data-icon="sound" title="Sound"></button>
+          <button id="pFs" class="icon-btn fs-only" data-icon="expand" title="Full screen"></button>
+        </div>
+        <button id="leaveBtn" class="btn big danger"><i data-icon="exit"></i><span id="leaveTxt" data-i18n="pause.leave">Leave match</span></button>
+      </div>
+    </div>
+
     <!-- RESULT -->
     <div id="result" class="overlay hidden">
       <div class="card result-card">
+        <div id="resultTitle" class="ribbon">You win!</div>
         <div id="resultEmoji" class="result-emoji">🏆</div>
-        <h2 id="resultTitle">You win!</h2>
-        <div id="resultScore" class="result-score">7 : 3</div>
+        <div id="resultScore" class="result-score"></div>
         <div id="resultReward" class="reward"></div>
-        <p id="rematchNote" class="muted"></p>
-        <button id="rematchBtn" class="btn primary big" data-i18n="result.rematch">🔁 Rematch</button>
-        <p class="muted small" data-i18n="result.other">or play something else together</p>
-        <div id="switchRow" class="switch-row"></div>
-        <button id="homeBtn" class="btn ghost" data-i18n="result.leave">Leave room</button>
-      </div>
-    </div>
-
-    <!-- SETTINGS -->
-    <div id="settings" class="overlay hidden">
-      <div class="card sheet">
-        <button class="close icon-btn" data-close-settings>✕</button>
-        <h2 data-i18n="set.title">Settings</h2>
-        <label class="field">
-          <span data-i18n="set.server">Game server</span>
-          <input id="serverInput" placeholder="wss://play.example.com  or  192.168.1.5:8080" autocomplete="off" dir="ltr" />
-        </label>
-        <p class="muted small" id="serverHint" data-i18n="set.serverHint">Leave empty to use the default server. On home Wi-Fi, use your PC's IP and port 8080.</p>
-        <label class="toggle"><input type="checkbox" id="musicInput" /> <span data-i18n="set.music">Music</span></label>
-        <label class="toggle"><input type="checkbox" id="sfxInput" /> <span data-i18n="set.sfx">Sound effects</span></label>
-        <label class="toggle"><input type="checkbox" id="hapticsInput" /> <span data-i18n="set.haptics">Vibration</span></label>
-        <button id="saveSettings" class="btn primary big" data-i18n="set.save">Save</button>
-      </div>
-    </div>
-
-    <!-- PROFILE -->
-    <div id="profile" class="overlay hidden">
-      <div class="card sheet profile-card">
-        <button class="close icon-btn" data-close-profile>✕</button>
-        <div class="prof-head"><div id="profBig" class="prof-av">🙂</div><div><h2 id="profName">Player</h2><p class="muted"><b id="profCoins">0</b> 🪙</p></div></div>
-        <div class="stat-row">
-          <div><b id="stPlayed">0</b><span data-i18n="prof.played">Played</span></div>
-          <div><b id="stWon">0</b><span data-i18n="prof.won">Won</span></div>
-          <div><b id="stRate">0%</b><span data-i18n="prof.rate">Win rate</span></div>
-          <div><b id="stBest">0</b><span data-i18n="prof.best">Best streak</span></div>
+        <p id="rematchNote" class="muted small"></p>
+        <div class="res-actions">
+          <button id="rematchBtn" class="btn primary big"><i data-icon="replay"></i><span data-i18n="result.rematch2">Rematch</span></button>
+          <div class="row">
+            <button id="otherBtn" class="btn"><i data-icon="gamepad"></i><span data-i18n="result.otherBtn">Other game</span></button>
+            <button id="homeBtn" class="btn"><i data-icon="home"></i><span data-i18n="result.home">Home</span></button>
+          </div>
         </div>
-        <h3 data-i18n="prof.missions">Daily missions</h3>
-        <div id="missionList" class="missions"></div>
-        <h3 data-i18n="prof.avatar">Avatar</h3>
-        <div id="avatarGrid" class="avatar-grid"></div>
-        <h3 data-i18n="prof.games">Your games</h3>
-        <div id="gameStats" class="game-stats"></div>
+        <div id="switchWrap" class="switch-wrap hidden">
+          <p class="muted small" data-i18n="result.other">or play something else together</p>
+          <div id="switchRow" class="switch-row"></div>
+        </div>
       </div>
     </div>
 

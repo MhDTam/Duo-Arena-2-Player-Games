@@ -1,11 +1,14 @@
 // Floating touch joystick (appears where the thumb lands) + WASD / arrow keys.
 // Action games use it on phones so the finger never covers the character.
 export class Joystick {
-  constructor({ axis = 'xy', radius = 58 } = {}) {
+  constructor({ axis = 'xy', radius = 50 } = {}) {
     this.axis = axis; this.R = radius;
     this.x = 0; this.y = 0; this.id = null; this.keys = new Set();
     this.el = document.createElement('div');
-    this.el.className = 'joy hidden';
+    // on touch screens a faint joystick rests in the bottom corner so you know where to thumb;
+    // touching anywhere still works (the stick jumps to your thumb)
+    this.touchUI = (typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches) || 'ontouchstart' in window;
+    this.el.className = `joy${this.touchUI ? ' rest' : ' hidden'}${axis === 'x' ? ' horiz' : ''}`;
     this.knob = document.createElement('i');
     this.el.appendChild(this.knob);
     (document.getElementById('hud') || document.body).appendChild(this.el);
@@ -24,7 +27,7 @@ export class Joystick {
     if (type === 'down' && this.id === null) {
       this.id = ev.pointerId; this.ox = ev.clientX; this.oy = ev.clientY;
       this.el.style.left = `${this.ox}px`; this.el.style.top = `${this.oy}px`;
-      this.el.classList.remove('hidden');
+      this.el.classList.remove('hidden', 'rest');
       this.set(0, 0);
       return true;
     }
@@ -41,17 +44,19 @@ export class Joystick {
       this.set(dx / this.R, dy / this.R);
       return true;
     }
-    if (type === 'up' || type === 'leave') {
+    if (type === 'up' || type === 'leave' || type === 'cancel') {
       this.id = null; this.set(0, 0);
-      this.el.classList.add('hidden');
+      if (this.touchUI) { this.el.style.left = ''; this.el.style.top = ''; this.el.classList.add('rest'); } else this.el.classList.add('hidden');
       return true;
     }
     return false;
   }
 
   set(x, y) {
-    this.x = x; this.y = this.axis === 'x' ? 0 : y;
-    this.knob.style.transform = `translate(${x * this.R}px, ${this.y * this.R}px)`;
+    this.knob.style.transform = `translate(${x * this.R}px, ${(this.axis === 'x' ? 0 : y) * this.R}px)`;
+    // reach full speed at ~80% of the ring, so a short thumb movement is enough
+    const m = Math.hypot(x, y), k = m > 0 ? Math.min(1, m / 0.8) / m : 0;
+    this.x = x * k; this.y = this.axis === 'x' ? 0 : y * k;
   }
 
   // combined touch + keyboard vector in screen space (y down), magnitude 0..1
