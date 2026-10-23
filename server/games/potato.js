@@ -1,7 +1,7 @@
 import { POTATO as C } from '../../shared/games.js';
 
 // Circular arena. The bomb holder must touch the other player to pass it before the hidden fuse runs out.
-const ACCEL = 28, DAMP = 3, MAX = 6.4, R = 0.6, IMMUNE = 0.7, DASH = 9, DASH_CD = 2.2;
+const ACCEL = 28, DAMP = 3, MAX = 6.4, R = 0.6, IMMUNE = 0.7, DASH = 9, DASH_CD = 2.2, GRIP = 6;
 
 export class PotatoSim {
   constructor() {
@@ -54,6 +54,8 @@ export class PotatoSim {
         if (d > 0.08) { const k = Math.min(1, d); p.vx += (dx / d) * ACCEL * k * dt; p.vz += (dz / d) * ACCEL * k * dt; }
       }
       const damp = Math.exp(-DAMP * dt); p.vx *= damp; p.vz *= damp;
+      // stick grip: velocity also eases straight towards the stick (sharp turns, quick stops on a phone)
+      if (p.useDir && !(p.dt > 0)) { const g = 1 - Math.exp(-GRIP * dt), m = MAX * (s === this.holder ? 1.12 : 1); p.vx += (p.jx * m - p.vx) * g; p.vz += (p.jz * m - p.vz) * g; }
       const sp = Math.hypot(p.vx, p.vz), max = MAX * (s === this.holder ? 1.12 : 1) * (p.dt > 0 ? 1.9 : 1);
       if (sp > max) { p.vx *= max / sp; p.vz *= max / sp; }
       p.x += p.vx * dt; p.z += p.vz * dt;

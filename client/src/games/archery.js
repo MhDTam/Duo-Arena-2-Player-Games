@@ -93,7 +93,7 @@ export default class ArcheryView {
     });
     // archers
     this.archers = PCOL.map((c, o) => {
-      const b = makeBuddy(c, undefined, 0.42); b.position.set(laneX(o), 0, 0); b.rotation.y = Math.PI; w.add(b);
+      const b = makeBuddy(c, undefined, 0.42); b.position.set(laneX(o), 0, 0); b.rotation.y = Math.PI; b.userData.push = 0.75; w.add(b);
       const bow = makeBow(); bow.rotation.y = Math.PI / 2; bow.position.set(laneX(o) - 0.12, 0.85, -0.25); w.add(bow);
       const nock = makeArrow(c); w.add(nock);
       return { b, bow, nock };

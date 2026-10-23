@@ -259,7 +259,7 @@ export default class HeistView {
       const moving = Math.abs(A[0] - B[0]) + Math.abs(A[1] - B[1]) > 1e-4;
       if (B[2] >= 0) this.face[i] = [Math.PI / 2, 0, -Math.PI / 2, Math.PI][B[2]];
       b.rotation.y += ((this.face[i] - b.rotation.y + Math.PI * 3) % (Math.PI * 2) - Math.PI) * Math.min(1, dt * 12);
-      b.position.set(x, 0.1 + (moving ? Math.abs(Math.sin(this.time * 14)) * 0.1 : 0), z);
+      b.position.set(x, 0.1, z); // (the character animates its own steps)
       // blink while protected (just stole the gem / got up after spikes)
       b.visible = (i === this.slot || this.visible(px, py)) && !(B[4] && !B[3] && Math.sin(this.time * 28) > 0.4);
       if (B[3] && (i === this.slot || this.visible(px, py))) { this.stars.visible = true; this.stars.position.set(x, 0.85, z); this.stars.children.forEach((st, j) => { const an = this.time * 6 + (j * Math.PI * 2) / 3; st.position.set(Math.cos(an) * 0.3, 0, Math.sin(an) * 0.3); }); }
@@ -270,6 +270,7 @@ export default class HeistView {
     this.me.position.set(this.buddies[this.slot].position.x, 0.11, this.buddies[this.slot].position.z);
     // gem: on the floor or held over the carrier's head
     const [gx, gy, gh] = s.gem;
+    this.buddies.forEach((b, i) => { b.userData.armsUp = gh === i ? 1 : 0; }); // carrying the gem overhead
     if (gh >= 0) { const b = this.buddies[gh]; this.gem.position.set(b.position.x, 1.05 + Math.sin(this.time * 6) * 0.05, b.position.z); this.gem.visible = gh === this.slot || this.visible(s.p[gh][0], s.p[gh][1]); }
     else { const [x, z] = cellPos(gx, gy); this.gem.position.set(x, 0.45 + Math.sin(this.time * 3) * 0.08, z); this.gem.visible = true; }
     this.gem.userData.dia.rotation.y += dt * 1.5;

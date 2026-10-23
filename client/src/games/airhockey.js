@@ -207,7 +207,7 @@ export default class AirHockeyView {
   render(sample, dt) {
     this.time += dt;
     const now = performance.now();
-    if (now - this.lastSent > 16) {
+    if (now - this.lastSent > (this.online ? 16 : 0)) {
       this.lastSent = now;
       this.send({ t: 'i', x: +this.target.x.toFixed(3), z: +this.target.z.toFixed(3) });
     }

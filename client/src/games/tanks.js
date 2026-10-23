@@ -3,7 +3,7 @@ import { TANKS as C } from '../../../shared/games.js';
 import { PALETTE, mat, roundedBox, makeIsland, bake } from '../scene.js';
 import { sfx } from '../audio.js';
 import { t } from '../i18n.js';
-import { Steer, isTouch, lerp, clamp, angLerp } from './common.js';
+import { Steer, isTouch, lerp, clamp, angLerp, pumpInput } from './common.js';
 
 const PCOL = [PALETTE.p0, PALETTE.p1];
 const FLOOR = 0xe9d8b4;
@@ -182,12 +182,12 @@ export default class TanksView {
   controls() { return { label: t('btn.fire', 'FIRE'), action: () => this.fire(), cooldown: () => this.cooldown }; }
   pan(x, z) { return this.stage.panAt({ x, y: 0.5, z }); }
 
+  pre(now) { if (this.steer.active) this.mode = 'dir'; pumpInput(this, now); }
+
   render(sample, dt) {
     this.time += dt;
     const T = this.time, fx = this.stage.fx;
-    if (this.steer.active) this.mode = 'dir';
     const now = performance.now();
-    if (now - this.lastSent > 33) { this.lastSent = now; this.send({ t: 'i', ...this.input() }); }
     this.marker.visible = this.mode === 'target' && this.active;
     if (this.marker.visible) { this.marker.position.x = this.target.x; this.marker.position.z = this.target.z; }
     this.tracks.update(dt);

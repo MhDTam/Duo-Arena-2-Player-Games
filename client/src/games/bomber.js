@@ -121,7 +121,7 @@ export default class BomberView {
     const d = this.steer.read();
     const mx = +d.x.toFixed(2), mz = +d.z.toFixed(2);
     const now = performance.now(), key = `${mx}|${mz}`;
-    if ((key !== this.sent && now - this.lastSent > 30) || now - this.lastSent > 300) { this.sent = key; this.lastSent = now; this.send({ t: 'i', mx, mz }); }
+    if ((key !== this.sent && now - this.lastSent > (this.online ? 30 : 0)) || now - this.lastSent > 300) { this.sent = key; this.lastSent = now; this.send({ t: 'i', mx, mz }); }
     if (!sample) return;
     const { a, b, t: k } = sample;
     this.updateGrid(b.g);
@@ -185,8 +185,6 @@ export default class BomberView {
       const moving = Math.hypot(B[0] - A[0], B[1] - A[1]) > 0.004;
       bd.position.set(wx(x), 0.08, wz(z));
       if (moving) bd.rotation.y = angLerp(bd.rotation.y, Math.PI / 2 - B[6], Math.min(1, dt * 14));
-      bd.userData.body.position.y = 0.34 + (moving ? Math.abs(Math.sin(T * 14)) * 0.07 : 0);
-      bd.userData.feet.forEach((f, n) => { f.position.z = 0.34 * 0.28 + (moving ? Math.sin(T * 14 + n * Math.PI) * 0.08 : 0); });
       if (!B[2]) {
         this.dead[i] = Math.min(1, this.dead[i] + dt * 1.5);
         const dd = this.dead[i];

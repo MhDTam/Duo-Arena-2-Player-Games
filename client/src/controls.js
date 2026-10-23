@@ -1,8 +1,11 @@
 // Floating touch joystick (appears where the thumb lands) + WASD / arrow keys.
 // Action games use it on phones so the finger never covers the character.
 export class Joystick {
-  constructor({ axis = 'xy', radius = 50 } = {}) {
-    this.axis = axis; this.R = radius;
+  constructor({ axis = 'xy', radius } = {}) {
+    // the stick's reach matches the drawn ring (52 px, scaled by the "button size" setting)
+    let ctl = 1;
+    try { ctl = parseFloat(getComputedStyle(document.body).getPropertyValue('--ctl')) || 1; } catch { /* ignore */ }
+    this.axis = axis; this.R = radius || Math.round(52 * ctl);
     this.x = 0; this.y = 0; this.id = null; this.keys = new Set();
     this.el = document.createElement('div');
     // on touch screens a faint joystick rests in the bottom corner so you know where to thumb;

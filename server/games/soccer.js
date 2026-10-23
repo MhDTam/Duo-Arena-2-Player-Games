@@ -1,6 +1,6 @@
 import { SOCCER as C } from '../../shared/games.js';
 
-const ACCEL = 30, DAMP = 3.2, MAX_SPEED = 7, DASH = 10, DASH_CD = 1.2;
+const ACCEL = 30, DAMP = 3.2, MAX_SPEED = 7, DASH = 10, DASH_CD = 1.2, GRIP = 6;
 const BALL_KEEP = 0.45, BALL_MAX = 18, WALL_E = 0.8, GOAL_PAUSE = 1.5;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
@@ -64,6 +64,8 @@ export class SoccerSim {
         if (d > 0.08) { const k = Math.min(1, d / 1.0); p.vx += (dx / d) * ACCEL * k * dt; p.vz += (dz / d) * ACCEL * k * dt; }
       }
       const damp = Math.exp(-DAMP * dt); p.vx *= damp; p.vz *= damp;
+      // stick grip: velocity also eases straight towards the stick (sharp turns, quick stops on a phone)
+      if (p.useDir && !(p.dt > 0)) { const g = 1 - Math.exp(-GRIP * dt); p.vx += (p.jx * MAX_SPEED - p.vx) * g; p.vz += (p.jz * MAX_SPEED - p.vz) * g; }
       const sp = Math.hypot(p.vx, p.vz), cap = p.dt > 0 ? MAX_SPEED * 2 : MAX_SPEED;
       if (sp > cap) { p.vx *= cap / sp; p.vz *= cap / sp; }
       p.x = clamp(p.x + p.vx * dt, -this.hw + r, this.hw - r);

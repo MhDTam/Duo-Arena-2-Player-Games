@@ -82,6 +82,7 @@ function makeKart(color) {
   });
   const driver = makeBuddy(color, 0x2b2d42, 0.27);
   driver.position.set(-0.12, 0.42, 0); driver.rotation.y = Math.PI / 2; body.add(driver);
+  driver.userData.push = 0.8; driver.userData.noBlob = true; driver.userData.hair.visible = false; // hands on the wheel, helmet on
   const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2), mat(0xffffff, { roughness: 0.3 }));
   helmet.position.set(-0.12, 0.8, 0); body.add(helmet);
   const flame = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.45, 8), new THREE.MeshBasicMaterial({ color: 0xffa94d, transparent: true, opacity: 0.9 }));
@@ -226,7 +227,7 @@ export default class RacingView {
     if (this.keys.has('ArrowDown') || this.keys.has('KeyS')) brake = true;
     s = Math.abs(s) < 0.06 ? 0 : clamp(s * 1.15, -1, 1);
     const now = performance.now(), key = `${s.toFixed(2)}|${brake ? 1 : 0}`;
-    if (key !== this.sent || now - this.lastSent > 250) { if (now - this.lastSent > 30) { this.sent = key; this.lastSent = now; this.send({ t: 'i', s: +s.toFixed(2), b: brake ? 1 : 0 }); } }
+    if (key !== this.sent || now - this.lastSent > 250) { if (now - this.lastSent > (this.online ? 30 : 0)) { this.sent = key; this.lastSent = now; this.send({ t: 'i', s: +s.toFixed(2), b: brake ? 1 : 0 }); } }
     this.padTex.offset.y -= dt * 1.6;
     if (!sample) return;
     const { a, b, t: k } = sample;

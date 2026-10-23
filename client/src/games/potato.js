@@ -3,7 +3,7 @@ import { POTATO as C } from '../../../shared/games.js';
 import { PALETTE, mat, makeIsland, makeBuddy, setBuddyColor, trail, bake } from '../scene.js';
 import { sfx } from '../audio.js';
 import { t } from '../i18n.js';
-import { Steer, isTouch, lerp, angLerp, damp } from './common.js';
+import { Steer, isTouch, lerp, angLerp, damp, pumpInput } from './common.js';
 
 const PCOL = [PALETTE.p0, PALETTE.p1];
 const TICK = [0.62, 0.36, 0.17];
@@ -89,11 +89,11 @@ export default class PotatoView {
   controls() { return { label: t('btn.dash', 'DASH'), action: () => this.dash(), cooldown: () => this.cooldown }; }
   pan(x, z) { return this.stage.panAt({ x, y: 1, z }); }
 
+  pre(now) { if (this.steer.active) this.mode = 'dir'; pumpInput(this, now); }
+
   render(sample, dt) {
     this.time += dt;
     const T = this.time, fx = this.stage.fx;
-    if (this.steer.active) this.mode = 'dir';
-    if (performance.now() - this.lastSent > 33) { this.lastSent = performance.now(); this.send({ t: 'i', ...this.input() }); }
     this.marker.visible = this.mode === 'target' && this.active;
     if (this.marker.visible) { this.marker.position.x = this.target.x; this.marker.position.z = this.target.z; }
     if (!sample) return;
@@ -109,13 +109,13 @@ export default class PotatoView {
       const dashing = !!b.p[i][3];
       if (P.prev && dt > 0) { P.vx = damp(P.vx, (x - P.prev.x) / dt, 18, dt); P.vz = damp(P.vz, (z - P.prev.z) / dt, 18, dt); }
       P.prev = { x, z };
-      const sp = Math.hypot(P.vx, P.vz), run = Math.min(1, sp / 6);
+      const sp = Math.hypot(P.vx, P.vz);
       if (sp > 0.5) u.facing = angLerp(u.facing, Math.atan2(P.vx, P.vz), Math.min(1, dt * 12));
-      P.lean = damp(P.lean, dashing ? 0.45 : run * 0.2, 12, dt);
-      g.position.set(x, P.burnt ? 0 : Math.abs(Math.sin(T * (8 + sp * 1.6) + i)) * 0.07 * run, z);
-      g.rotation.set(P.burnt ? 0 : P.lean, u.facing, P.burnt ? 0 : Math.sin(T * (8 + sp * 1.6) + i) * 0.06 * run);
-      u.feet.forEach((f, j) => { f.position.z = 0.7 * 0.28 + Math.sin(T * (12 + sp * 2) + j * Math.PI) * 0.12 * run; });
+      // (running, leaning and wobbling are animated by the character itself)
+      g.position.set(x, 0, z);
+      g.rotation.set(0, u.facing, 0);
       const holding = b.h === i && !b.o;
+      u.armsUp = holding ? 1 : 0; // hands up, holding the bomb over the head
       u.frown = holding || P.burnt ? 1 : 0;
       u.squint = dashing || P.burnt ? 1 : 0;
       // the holder sweats (more as the fuse gets hot)

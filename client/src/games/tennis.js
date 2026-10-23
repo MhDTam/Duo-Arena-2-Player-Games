@@ -4,7 +4,7 @@ import { sfx } from '../audio.js';
 import { t } from '../i18n.js';
 import { TENNIS as C } from '../../../shared/games.js';
 import { side, ahead, landing } from '../../../shared/tennis.js';
-import { Steer, isTouch, makeNet, lerp, clamp, angLerp } from './common.js';
+import { Steer, isTouch, makeNet, lerp, clamp, angLerp, pumpInput } from './common.js';
 import { panel } from './kit8.js';
 
 // Tennis view: a hard court seen from behind your baseline. A ring at your feet is the timing
@@ -38,7 +38,7 @@ export default class TennisView {
     // players
     this.pl = PCOL.map((c, i) => {
       const b = makeBuddy(c, undefined, 0.42); w.add(b);
-      const rk = makeRacket(c); rk.position.set(0.42, 0.25, 0.1); b.add(rk);
+      const rk = makeRacket(c); rk.position.set(0.42, 0.25, 0.1); b.userData.torso.add(rk); b.userData.holdR = 1;
       return { b, rk, face: i === 0 ? Math.PI : 0, x: 0, z: 0 };
     });
     // ball + shadow + bounce marker
@@ -80,11 +80,12 @@ export default class TennisView {
 
   controls() { return null; } // the three shot buttons replace the single action button
 
+  pre(now) { pumpInput(this, now); }
+
   render(sample, dt) {
     this.time += dt;
     if ((window.innerHeight > window.innerWidth) !== this.portrait) this.frameCam();
     const now = performance.now();
-    if (now - this.lastSent > 33) { this.lastSent = now; this.send({ t: 'i', ...this.input() }); }
     const s = sample?.b; if (!s) return;
     this.last = s;
     const a = sample.a || s, k = sample.t ?? 1;
@@ -94,7 +95,7 @@ export default class TennisView {
       const x = lerp(A[0], B[0], k), z = lerp(A[1], B[1], k);
       const moving = Math.hypot(x - P.x, z - P.z) > 0.004;
       P.x = x; P.z = z;
-      P.b.position.set(x, moving ? Math.abs(Math.sin(this.time * 16 + i)) * 0.06 : 0, z);
+      P.b.position.set(x, 0, z);
       // face the net, turn a little towards the ball
       const want = side(i) > 0 ? Math.PI : 0;
       P.face = angLerp(P.face, want, Math.min(1, dt * 8)); P.b.rotation.y = P.face;

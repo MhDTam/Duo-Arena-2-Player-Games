@@ -114,6 +114,19 @@ export class SnapBuffer {
     if (this.snaps.length > 90) this.snaps.shift();
   }
   latest() { return this.snaps[this.snaps.length - 1]?.state; }
+  lastTick() { return this.snaps.length ? this.snaps[this.snaps.length - 1].tick : 0; }
+  // the pair of snapshots around tick rt (on-device matches render the newest step, interpolated)
+  sampleTick(rt) {
+    const n = this.snaps.length;
+    if (!n) return null;
+    const p = this.pair;
+    for (let i = n - 1; i > 0; i--) {
+      const A = this.snaps[i - 1];
+      if (A.tick <= rt) { const B = this.snaps[i]; p.a = A.state; p.b = B.state; p.t = Math.max(0, Math.min(1, (rt - A.tick) / (B.tick - A.tick || 1))); return p; }
+    }
+    p.a = p.b = this.snaps[0].state; p.t = 0;
+    return p;
+  }
   // ideal render tick: newest possible time minus a delay that covers one snapshot gap + jitter
   target(now) {
     let min = Infinity, sum = 0;

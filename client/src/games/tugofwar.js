@@ -68,7 +68,7 @@ export default class TugOfWarView {
     // two pullers per team (leader + helper)
     this.teams = PCOL.map((c, i) => {
       const lead = makeBuddy(c), help = makeBuddy(c, 0x2b2d42, 0.6);
-      [lead, help].forEach((b) => { b.rotation.order = 'YXZ'; b.rotation.y = i === 0 ? Math.PI : 0; w.add(b); });
+      [lead, help].forEach((b) => { b.rotation.order = 'YXZ'; b.rotation.y = i === 0 ? Math.PI : 0; b.userData.push = 1; w.add(b); }); // hands on the rope
       return { lead, help, lean: 0, fall: 0, splashed: false };
     });
     this.rope = new Rope(w);

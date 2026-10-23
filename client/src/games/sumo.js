@@ -3,7 +3,7 @@ import { SUMO as C } from '../../../shared/games.js';
 import { PALETTE, mat, makeIsland, makeTree, makeRoundTree, makeRock, makeBuddy, setBuddyColor, makeCrowd, trail, bake } from '../scene.js';
 import { sfx } from '../audio.js';
 import { t } from '../i18n.js';
-import { Steer, isTouch, lerp, clamp, angLerp, damp } from './common.js';
+import { Steer, isTouch, lerp, clamp, angLerp, damp, pumpInput } from './common.js';
 
 const PCOL = [PALETTE.p0, PALETTE.p1];
 const DIRT = [0xd49a66, 0xb87d4f, 0x9bd86f, 0xc9c3d6];
@@ -96,7 +96,7 @@ export default class SumoView {
     this.players = PCOL.map((c, i) => {
       const g = makeBuddy(c, 0x2b2d42);
       g.rotation.order = 'YXZ';
-      g.userData.belt.material.color.setHex(0x3d3b52); g.userData.knot.material.color.setHex(0x3d3b52);
+      g.userData.belt.material.color.setHex(0x3d3b52); g.userData.belt.visible = true; // mawashi
       g.userData.facing = i === 1 ? Math.PI : 0;
       w.add(g);
       const danger = new THREE.Mesh(new THREE.RingGeometry(0.8, 0.98, 32), new THREE.MeshBasicMaterial({ color: 0xff4d4d, transparent: true, opacity: 0, depthWrite: false }));
@@ -149,12 +149,12 @@ export default class SumoView {
 
   pan(x, z) { return this.stage.panAt({ x, y: 0, z }); }
 
+  pre(now) { if (this.steer.active) this.mode = 'dir'; pumpInput(this, now); }
+
   render(sample, dt) {
     this.time += dt;
     const T = this.time, fx = this.stage.fx;
-    if (this.steer.active) this.mode = 'dir';
     const now = performance.now();
-    if (now - this.lastSent > 33) { this.lastSent = now; this.send({ t: 'i', ...this.input() }); }
     this.marker.visible = this.mode === 'target' && this.active;
     if (this.marker.visible) { this.marker.position.x = this.target.x; this.marker.position.z = this.target.z; }
     this.minis.forEach((m) => { m.position.y = m.userData.y0 + Math.sin(T * 0.7 + m.userData.ph) * 0.18; });
@@ -195,13 +195,12 @@ export default class SumoView {
       // waddle + lean into the run, squash on hits
       P.squashV += (-120 * P.squash - 9 * P.squashV) * dt; P.squash += P.squashV * dt;
       const sq = clamp(P.squash, -0.35, 0.35);
-      const wob = Math.min(1, sp / 6);
-      u.body.scale.set(1 + wob * 0.05 + sq * 0.5, 1.08 - wob * 0.07 - sq, 1 + wob * 0.05 + sq * 0.5);
-      P.lean = damp(P.lean, dashing ? 0.45 : wob * 0.18, 12, dt);
-      g.position.set(x, y + (out ? 0 : Math.abs(Math.sin(T * (6 + sp * 1.5) + i)) * 0.05 * (0.3 + wob)), z);
+      // (running, leaning and wobbling are animated by the character itself)
+      u.body.scale.set(1 + sq * 0.5, 1.08 - sq, 1 + sq * 0.5);
+      u.push = dashing ? 1 : 0;
+      g.position.set(x, y, z);
       if (out) P.spin += dt * 9;
-      g.rotation.set(P.lean + (out ? P.spin * 0.3 : 0), u.facing + (out ? P.spin : 0), Math.sin(T * (6 + sp * 1.5) + i) * 0.07 * wob);
-      u.feet.forEach((f, j) => { f.position.z = 0.7 * 0.28 + Math.sin(T * (10 + sp * 2) + j * Math.PI) * 0.1 * wob; });
+      g.rotation.set(out ? P.spin * 0.3 : 0, u.facing + (out ? P.spin : 0), 0);
       // near the edge: red ring, worried face, sweat drops
       const edge = Math.hypot(x, z) / r;
       const danger = !out && edge > 0.72 ? clamp((edge - 0.72) / 0.22, 0, 1) : 0;

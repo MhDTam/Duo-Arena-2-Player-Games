@@ -237,7 +237,7 @@ export default class FoosballView {
     this.u += d;
     this.myKick = Math.max(0, this.myKick - dt); this.kickCd = Math.max(0, this.kickCd - dt);
     const now = performance.now();
-    if (now - this.lastSent > 30 && this.tu !== this.sentU) { this.lastSent = now; this.sentU = this.tu; this.send({ t: 'i', u: +this.tu.toFixed(3) }); }
+    if (now - this.lastSent > (this.online ? 30 : 0) && this.tu !== this.sentU) { this.lastSent = now; this.sentU = this.tu; this.send({ t: 'i', u: +this.tu.toFixed(3) }); }
     if (!sample) return;
     const { a, b, t: k } = sample;
     const other = 1 - this.slot;

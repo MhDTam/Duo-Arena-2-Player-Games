@@ -54,7 +54,7 @@ export function makeNet(THREE, w, h, { stage, repeat = 7, color = 0xffffff } = {
 //  • mouse  → the view keeps its own "follow the cursor" behaviour
 // read() returns a camera-relative world direction { x, z, mag } (mag 0..1).
 export class Steer {
-  constructor(stage, { axis = 'xy', radius = 58, dead = 0.12 } = {}) {
+  constructor(stage, { axis = 'xy', radius, dead = 0.1 } = {}) {
     this.stage = stage;
     this.joy = new Joystick({ axis, radius });
     this.dead = dead;
@@ -79,4 +79,19 @@ export class Steer {
   }
 
   dispose() { this.joy.dispose(); }
+}
+
+// Movement input. On the device (bot matches) it reaches the simulation every frame, just before the
+// game steps, so a thumb movement shows up in the very next frame. Online it goes out as soon as the
+// stick changes (up to 60/s) and ~30 times a second while it's held still.
+// Views call this from pre(now), which main.js runs before stepping the match.
+export function pumpInput(view, now) {
+  const m = view.input(), gap = now - (view.lastSent || 0);
+  if (view.online) {
+    const key = JSON.stringify(m);
+    if (gap < 33 && (key === view.sentKey || gap < 16)) return;
+    view.sentKey = key;
+  }
+  view.lastSent = now;
+  view.send({ t: 'i', ...m });
 }

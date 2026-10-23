@@ -113,9 +113,10 @@ export default class RunnerView {
       const b = this.runners[o];
       const jumpT = P[3], slideT = P[4];
       const jy = jumpT > 0 ? Math.sin((1 - jumpT / C.jumpT) * Math.PI) * 1.25 : 0;
-      b.position.set(trackX(o) + x, jy + (P[5] ? 0 : Math.abs(Math.sin(this.time * 16 + o)) * 0.08), -z);
+      b.position.set(trackX(o) + x, jy, -z); // (run cycle, lean, squash on landing: animated by the character)
       b.scale.y = damp(b.scale.y, slideT > 0 ? 0.5 : 1, 18, dt);
-      b.rotation.x = slideT > 0 ? -0.5 : P[5] ? Math.sin(this.time * 30) * 0.3 : 0.12;
+      b.rotation.x = slideT > 0 ? -0.5 : P[5] ? Math.sin(this.time * 30) * 0.3 : 0;
+      b.userData.frown = P[5] ? 1 : 0;
       this.shields[o].visible = !!P[7]; this.shields[o].position.set(b.position.x, b.position.y + 0.5, b.position.z);
       if (P[6] && Math.random() < 0.5) this.stage.fx.puff(b.position.clone().add(new THREE.Vector3(0, 0.3, 0.4)), 0xffd43b, 1, 0.3);
     });

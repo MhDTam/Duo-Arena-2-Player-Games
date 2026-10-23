@@ -4,7 +4,7 @@ import { sfx } from '../audio.js';
 import { t } from '../i18n.js';
 import { SNOW as C } from '../../../shared/games.js';
 import { panel } from './kit8.js';
-import { Steer, isTouch, lerp, angLerp } from './common.js';
+import { Steer, isTouch, lerp, angLerp, pumpInput } from './common.js';
 
 // Snowball Fight view: a snowy yard split by a blue line, forts, two kids in beanies. Hold THROW to
 // wind up — a ring shows where the snowball will land; BUILD drops a snow wall in front of you.
@@ -12,11 +12,12 @@ const PCOL = [PALETTE.p0, PALETTE.p1];
 const hex = (n) => `#${n.toString(16).padStart(6, '0')}`;
 
 function dressUp(b, color) {
-  const R = 0.42;
-  const hat = new THREE.Mesh(new THREE.SphereGeometry(R * 0.78, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), mat(color, { roughness: 0.8 })); hat.position.y = R * 1.55; b.add(hat);
-  const pom = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 8), mat(0xffffff)); pom.position.y = R * 2.35; b.add(pom);
-  const scarf = new THREE.Mesh(new THREE.TorusGeometry(R * 0.72, 0.07, 8, 20), mat(0xffffff)); scarf.rotation.x = Math.PI / 2; scarf.position.y = R * 1.0; b.add(scarf);
-  b.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+  const R = 0.42, top = b.userData.torso; // (accessories ride on the torso so they follow the body's bob and lean)
+  b.userData.hair.visible = false;
+  const hat = new THREE.Mesh(new THREE.SphereGeometry(R * 0.93, 22, 10, 0, Math.PI * 2, 0, Math.PI / 2), mat(color, { roughness: 0.8 })); hat.position.y = R * 1.5; top.add(hat);
+  const brim = new THREE.Mesh(new THREE.TorusGeometry(R * 0.9, R * 0.12, 8, 28), mat(0xffffff, { roughness: 0.9 })); brim.rotation.x = Math.PI / 2; brim.position.y = R * 1.52; top.add(brim);
+  const pom = new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 8), mat(0xffffff)); pom.position.y = R * 2.48; top.add(pom);
+  b.traverse((o) => { if (o.isMesh && !o.userData.dynamic) o.castShadow = true; });
 }
 
 export default class SnowballView {
@@ -53,10 +54,11 @@ export default class SnowballView {
   pointer(type, ev) { this.steer.pointer(type, ev); }
   key(ev) { if (ev.code === 'Space' && !ev.repeat) { ev.preventDefault(); this.charge(); } if (ev.code === 'KeyB') this.send({ t: 'i', w: 1 }); }
 
+  pre(now) { pumpInput(this, now); }
+
   render(sample, dt) {
     this.time += dt;
     const now = performance.now();
-    if (now - this.lastSent > 33) { this.lastSent = now; this.send({ t: 'i', ...this.input() }); }
     const s = sample?.b; if (!s) return;
     this.last = s;
     // walls
@@ -80,9 +82,10 @@ export default class SnowballView {
       const want = P[4] >= 0 || Math.hypot(vx, vz) < 0.3 ? Math.atan2(O[0] - x, O[1] - z) : Math.atan2(vx, vz);
       K.face = angLerp(K.face, want, Math.min(1, dt * 10));
       K.b.rotation.y = K.face;
-      K.b.position.set(x, Math.hypot(vx, vz) > 0.4 ? Math.abs(Math.sin(this.time * 14 + i)) * 0.06 : 0, z);
+      K.b.position.set(x, 0, z);
       K.b.rotation.z = P[6] ? Math.sin(this.time * 30) * 0.15 : 0;
       K.b.scale.y = 1.3 * (P[4] >= 0 ? 1 - P[4] * 0.12 : 1);
+      K.b.userData.windup = P[4] >= 0 ? 1 : 0;
     });
     // snowballs
     const prev = new Map((a.b || []).map((q) => [q[0], q])), seen = new Set();
@@ -114,7 +117,7 @@ export default class SnowballView {
 
   onEvent(e) {
     const mine = e.slot === this.slot;
-    if (e.e === 'throw') { sfx.swoosh(); return null; }
+    if (e.e === 'throw') { sfx.swoosh(); const K = this.kids[e.slot]; if (K) K.b.userData.throw = 1; return null; }
     if (e.e === 'hit') { sfx.splash?.(); this.stage.fx.burst(new THREE.Vector3(e.x, e.y, e.z), [0xffffff, 0xe7f5ff], 18, 0.8); if (!mine) this.stage.shake(0.15); return { toast: mine ? t('snow.hitYou', 'Splat! Got them ❄️') : t('snow.hitThem', 'You got hit!') }; }
     if (e.e === 'splat') { sfx.pop(); this.stage.fx.puff(new THREE.Vector3(e.x, e.y + 0.1, e.z), 0xffffff, 6, 0.5); return null; }
     if (e.e === 'build') { sfx.place(); this.stage.fx.puff(new THREE.Vector3(e.x, 0.5, e.z), 0xffffff, 10, 0.8); return null; }

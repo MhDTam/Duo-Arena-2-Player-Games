@@ -486,4 +486,7 @@ export const AR = {
   'pause.paused': 'المباراة متوقفة', 'pause.online': 'أونلاين — المباراة مستمرة!',
   'result.rematch2': 'إعادة', 'result.otherBtn': 'لعبة ثانية', 'result.home': 'الرئيسية', 'result.win2': 'فوز!', 'result.lose2': 'خسارة',
   'set.gControls': 'التحكم', 'set.ctlSize': 'حجم الأزرار', 'set.ctlS': 'صغير', 'set.ctlM': 'عادي', 'set.ctlL': 'كبير', 'set.autoFs': 'ملء الشاشة من تبدي المباراة',
+  'set.gGfx': 'الرسومات', 'set.gfxAuto': 'تلقائي', 'set.gfxLow': 'منخفض', 'set.gfxMed': 'متوسط', 'set.gfxHigh': 'عالي',
+  'set.gfxHint.auto': 'يتعدّل وحده حتى تبقى اللعبة سلسة على جهازك', 'set.gfxHint.low': 'الأسرع — للموبايلات الضعيفة (بدون ظلال)',
+  'set.gfxHint.med': 'متوازن بين الشكل والسرعة', 'set.gfxHint.high': 'أوضح صورة وظلال ناعمة — للأجهزة القوية',
 };

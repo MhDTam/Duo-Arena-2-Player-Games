@@ -277,8 +277,8 @@ export default class FishingView {
     this.anglers = [0, 1].map((s) => {
       const sz = s === 0 ? 1 : -1;
       const b = makeBuddy(PCOL[s], 0x2b2d42, 0.5);
-      b.position.set(0.72, 0.33, sz * (this.hl + 0.82)); b.rotation.y = s === 0 ? Math.PI : 0;
-      const hat = makeHat(PCOL[s]); hat.position.set(0, 0.97, 0); hat.rotation.z = 0.12; b.add(hat);
+      b.position.set(0.72, 0.33, sz * (this.hl + 0.82)); b.rotation.y = s === 0 ? Math.PI : 0; b.userData.push = 0.55;
+      const hat = makeHat(PCOL[s]); hat.position.set(0, 0.97, 0); hat.rotation.z = 0.12; b.userData.torso.add(hat); b.userData.hair.visible = false;
       w.add(b);
       const rod = makeRod(PCOL[s]);
       rod.position.set(0.66, 0.62, sz * (this.hl + 0.3));

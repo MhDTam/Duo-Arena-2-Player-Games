@@ -4,6 +4,9 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { BUDDIES, animateBuddy, setBuddyQuality } from './buddy.js';
+
+export { makeBuddy, setBuddyColor, buddyMoods } from './buddy.js';
 
 export const PALETTE = {
   p0: 0xff7a2f, // orange (slot 0)
@@ -92,15 +95,19 @@ export function bake(group) {
   return group;
 }
 
-// ------------------------------------------------------------------ living characters
-const BUDDIES = new Set();
+// Graphics presets (Settings): auto walks a quality ladder to hold 60 fps; the fixed presets trade
+// sharpness / shadows / eye candy for speed. Anti-aliasing is picked when the renderer is created.
+export const GFX_LEVELS = ['auto', 'low', 'med', 'high'];
+export function savedGfx() { try { const v = localStorage.getItem('duo.gfx'); return GFX_LEVELS.includes(v) ? v : 'auto'; } catch { return 'auto'; } }
 
 export class Stage {
   constructor(canvas) {
     const dpr = window.devicePixelRatio || 1;
     this.touch = (typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches) || 'ontouchstart' in window;
-    // MSAA on a dense phone screen costs a lot of fill rate for little gain: skip it there
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: !(this.touch && dpr >= 2), powerPreference: 'high-performance' });
+    this.gfx = savedGfx();
+    // MSAA on a dense phone screen costs a lot of fill rate for little gain: skip it there (unless "high")
+    const aa = this.gfx === 'high' || (this.gfx !== 'low' && !(this.touch && dpr >= 2));
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: aa, powerPreference: 'high-performance' });
     this.maxPR = Math.min(2, dpr);
     // quality ladder (best first): [pixel ratio, shadow map size]. adapt() walks it to hold 60 fps.
     const prs = [...new Set([this.maxPR, 1.75, 1.5, 1.25, 1, 0.85].filter((v) => v <= this.maxPR))].sort((a, b) => b - a);
@@ -162,8 +169,38 @@ export class Stage {
     this.perf = { t: 0, n: 0, good: 0, settle: 1.5, failQ: -1, failAt: -1e9, clock: 0, fps: 60 };
     this._v = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
     this._up = new THREE.Vector3(0, 1, 0);
+    this.cloudsWanted = true;
+    this.setGfx(this.gfx, false);
     this.resize();
     window.addEventListener('resize', () => this.resize());
+  }
+
+  // apply a graphics preset: 'auto' | 'low' | 'med' | 'high'
+  setGfx(name, save = true) {
+    if (!GFX_LEVELS.includes(name)) name = 'auto';
+    this.gfx = name;
+    if (save) { try { localStorage.setItem('duo.gfx', name); } catch { /* ignore */ } }
+    const look = name === 'auto' ? (this.touch ? 'med' : 'high') : name;
+    this.look = look;
+    this.adaptive = name === 'auto';
+    if (this.adaptive) this.setQuality(this.touch ? Math.max(0, this.levels.findIndex(([pr]) => pr <= 1.5)) : 0, true);
+    else this.applyRes(Math.min(this.maxPR, look === 'low' ? 1 : look === 'med' ? 1.5 : 2), look === 'high' ? 2048 : 1024);
+    const shadows = look !== 'low';
+    this.sun.castShadow = shadows; // (materials recompile by themselves when this changes)
+    this.sun.shadow.radius = look === 'high' ? 5 : 3.5;
+    this.fx.thin = look === 'low';
+    this.decorOn = look !== 'low';
+    this.decor.group.visible = this.decorOn;
+    this.clouds.mesh.visible = this.decorOn && this.cloudsWanted;
+    setBuddyQuality(look, shadows);
+    this.perf.settle = 1;
+  }
+
+  applyRes(pr, sh) {
+    this.pr = pr;
+    this.renderer.setPixelRatio(pr);
+    this.resize();
+    if (this.sun.shadow.mapSize.x !== sh) { this.sun.shadow.mapSize.set(sh, sh); this.sun.shadow.map?.dispose(); this.sun.shadow.map = null; }
   }
 
   setSky(name) {
@@ -209,12 +246,13 @@ export class Stage {
     this.fx.clear();
     BUDDIES.clear();
     this.orbiting = false;
-    this.clouds.mesh.visible = true;
+    this.cloudsWanted = true;
+    this.clouds.mesh.visible = this.decorOn;
     this.perf.settle = 1.2; // ignore the frame-time spike of building a new scene
     if (this.lensFn) { this.lensFn = null; this.resize(); }
   }
 
-  setClouds(on) { this.clouds.mesh.visible = on; }
+  setClouds(on) { this.cloudsWanted = on; this.clouds.mesh.visible = on && this.decorOn; }
   setLens(fn) { this.lensFn = fn; this.resize(); }
 
   // compile the new scene's shaders now (during the countdown) instead of mid-game
@@ -314,14 +352,12 @@ export class Stage {
 
   // Hold 60 fps: step the quality ladder down quickly when frames get slow, and back up only after
   // a long run of fast frames (never straight back into a level that just failed).
-  setQuality(q) {
+  setQuality(q, force = false) {
     q = Math.max(0, Math.min(this.levels.length - 1, q));
-    if (q === this.q) return;
+    if (q === this.q && !force) return;
     const [pr, sh] = this.levels[q];
-    this.q = q; this.pr = pr;
-    this.renderer.setPixelRatio(pr);
-    this.resize();
-    if (this.sun.shadow.mapSize.x !== sh) { this.sun.shadow.mapSize.set(sh, sh); this.sun.shadow.map?.dispose(); this.sun.shadow.map = null; }
+    this.q = q;
+    this.applyRes(pr, sh);
   }
 
   adapt(dt) {
@@ -332,6 +368,7 @@ export class Stage {
     if (p.t < 1) return;
     const fps = p.n / p.t;
     p.fps = fps; p.t = 0; p.n = 0;
+    if (!this.adaptive) return; // fixed preset: just measure
     if (fps < 54 && this.q < this.levels.length - 1) {
       p.failQ = this.q; p.failAt = p.clock; p.good = 0;
       this.setQuality(this.q + 1);
@@ -356,8 +393,8 @@ export class Stage {
       s.material.opacity = k > 0.7 ? 1 - (k - 0.7) / 0.3 : 1;
       if (k >= 1) { this.scene.remove(s); s.material.map.dispose(); s.material.dispose(); this.texts.splice(i, 1); }
     }
-    this.clouds.update(dt, t);
-    this.decor.update(dt, t);
+    if (this.clouds.mesh.visible) this.clouds.update(dt, t);
+    if (this.decorOn) this.decor.update(dt, t);
     for (const b of BUDDIES) animateBuddy(b, dt, t);
 
     // camera: intro swoop -> base (+ optional slow orbit on the result screen) + shake
@@ -658,6 +695,7 @@ function makeSkyDecor(scene) {
   const bm = new THREE.Matrix4(), wm = new THREE.Matrix4(), rot = new THREE.Matrix4(), mir = new THREE.Matrix4().makeScale(-1, 1, 1);
   const bq = new THREE.Quaternion(), bv = new THREE.Vector3(), one = new THREE.Vector3(1, 1, 1), yAxis = new THREE.Vector3(0, 1, 0);
   return {
+    group,
     update(dt, t) {
       farGroup.position.y = Math.sin(t * 0.35) * 0.35; farGroup.rotation.y += dt * 0.004;
       birds.forEach((u, i) => {
@@ -704,6 +742,7 @@ class FX {
   }
 
   add(type, pos, color, v, o = {}) {
+    if (this.thin && (this.skip = !this.skip)) return; // low preset: half the particles
     const T = this.types[type];
     if (T.list.length >= P_CAP) T.list.shift();
     T.list.push({
@@ -801,81 +840,6 @@ class FX {
       m.material.opacity = 0.9 * (1 - k);
     }
   }
-}
-
-// ------------------------------------------------------------------ characters
-// vertex-colour a geometry (lets differently coloured parts share one mesh / draw call)
-function tintGeo(geo, hex) {
-  const c = new THREE.Color(hex), n = geo.attributes.position.count, a = new Float32Array(n * 3);
-  for (let i = 0; i < n; i++) { a[i * 3] = c.r; a[i * 3 + 1] = c.g; a[i * 3 + 2] = c.b; }
-  geo.setAttribute('color', new THREE.BufferAttribute(a, 3));
-  return geo;
-}
-
-// Cute round character used across games (sumo, soccer, tug of war, penalty…).
-// Built from 8 meshes (eyes, trims and face details are merged) to keep draw calls low on phones.
-export function makeBuddy(color, bun = 0x2b2d42, R = 0.7) {
-  const g = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.SphereGeometry(R, 32, 22), mat(color, { roughness: 0.55 }));
-  body.castShadow = true;
-  body.position.y = R;
-  body.scale.y = 1.08;
-  g.add(body); // keep the body as the first child (home screen animates children[0])
-  // belt + knot: one mesh, one recolourable material
-  const beltGeo = new THREE.TorusGeometry(R * 0.93, 0.1, 8, 32); beltGeo.rotateX(Math.PI / 2); beltGeo.translate(0, R * 0.75, 0);
-  const knotGeo = new THREE.SphereGeometry(0.1, 10, 8); knotGeo.translate(0, R * 0.75, R * 0.92);
-  const trim = new THREE.Mesh(mergeGeometries([beltGeo, knotGeo]), mat(0xffffff, { roughness: 0.7 }));
-  g.add(trim);
-  const face = new THREE.Group();
-  const eyes = [], feet = [];
-  const eyeMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.25 });
-  const details = [];
-  [-1, 1].forEach((s) => {
-    const white = tintGeo(new THREE.SphereGeometry(0.17, 16, 12), 0xffffff);
-    const pupil = tintGeo(new THREE.SphereGeometry(0.09, 12, 8).translate(0, 0, 0.12), PALETTE.ink);
-    const shine = tintGeo(new THREE.SphereGeometry(0.03, 6, 4).translate(0.035, 0.04, 0.2), 0xffffff);
-    const eye = new THREE.Mesh(mergeGeometries([white, pupil, shine]), eyeMat);
-    eye.position.set(s * 0.24, R * 1.3, R * 0.86);
-    face.add(eye);
-    eyes.push(eye);
-    const cheek = new THREE.SphereGeometry(0.07, 8, 6); cheek.scale(1, 0.6, 0.5); cheek.translate(s * 0.4, R * 1.05, R * 0.86);
-    details.push(tintGeo(cheek, 0xff8fab));
-    const foot = new THREE.Mesh(new THREE.SphereGeometry(R * 0.26, 12, 8), body.material);
-    foot.scale.set(1, 0.55, 1.35); foot.position.set(s * R * 0.42, R * 0.1, R * 0.28); foot.castShadow = true;
-    g.add(foot); feet.push(foot);
-  });
-  const hairGeo = new THREE.SphereGeometry(0.17, 12, 10); hairGeo.translate(0, R * 1.95, -0.1);
-  details.push(tintGeo(hairGeo, bun));
-  const hair = new THREE.Mesh(mergeGeometries(details), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6 }));
-  hair.castShadow = true;
-  face.add(hair);
-  const mouth = new THREE.Mesh(new THREE.TorusGeometry(0.075, 0.022, 6, 12, Math.PI), mat(PALETTE.ink));
-  mouth.rotation.z = Math.PI; mouth.position.set(0, R * 1.08, R * 0.97);
-  face.add(mouth);
-  g.add(face);
-  g.userData = { body, facing: 0, eyes, mouth, mouthY: R * 1.08, feet, belt: trim, knot: trim, hair, blink: 1 + Math.random() * 3, squint: 0, frown: 0 };
-  BUDDIES.add(g);
-  return g;
-}
-
-export function setBuddyColor(g, hex) {
-  g.userData.body.material.color.setHex(hex);
-  (g.userData.feet || []).forEach((f) => f.material.color.setHex(hex));
-}
-
-function animateBuddy(g, dt) {
-  const u = g.userData;
-  if (!u.eyes) return;
-  u.blink -= dt;
-  let sy = 1;
-  if (u.blink < 0.12) sy = Math.max(0.1, Math.abs(u.blink - 0.06) / 0.06);
-  if (u.blink <= 0) u.blink = 1.8 + Math.random() * 3.2;
-  sy = Math.min(sy, 1 - (u.squint || 0) * 0.65);
-  u.eyes.forEach((e) => { e.scale.y = sy; });
-  // mouth: smile (frown 0) -> flat -> frown (1)
-  const f = (u.frown || 0) > 0.5;
-  u.mouth.rotation.z = f ? 0 : Math.PI;
-  u.mouth.position.y = u.mouthY + (f ? -0.05 : 0);
 }
 
 // ------------------------------------------------------------------ helpers used by several games

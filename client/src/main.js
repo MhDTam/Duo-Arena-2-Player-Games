@@ -4,7 +4,7 @@ import { hydrateIcons, icon } from './icons.js';
 import pkg from '../../package.json';
 import * as THREE from 'three';
 import { GAMES } from '../../shared/games.js';
-import { Stage, makeIsland, makeBuddy, PALETTE } from './scene.js';
+import { Stage, PALETTE, buddyMoods, GFX_LEVELS } from './scene.js';
 import { Net, SnapBuffer, publicBase, savedServer, saveServer, normalizeServer, isNative } from './net.js';
 import { LocalServer } from './local.js';
 import { initNative, setHaptics, hapticsEnabled, buzz, isNativeApp } from './native.js';
@@ -274,6 +274,7 @@ function startGame(m) {
   app.lastSnap = m.snap;
   const View = VIEWS[m.game];
   app.view = new View({ stage, slot: m.you, send, online: !m.local, latest: () => app.lastSnap, rtt: () => app.rtt || 80 });
+  app.view.online = !m.local;
   stage.warm();
   playTheme(GAME_MUSIC[m.game] || 'arcade');
   stage.setOrbit(false);
@@ -340,6 +341,7 @@ function showResult(m) {
   buzz(win ? 'heavy' : 'light');
   closePause();
   app.view?.celebrate?.(m.winner);
+  buddyMoods([0, 1].includes(m.winner) ? m.winner : -1); // the winner's character cheers, the other one sulks
   setTimeout(() => stage.setOrbit(true), 900);
   if (win) stage.fx.burst(new THREE.Vector3(0, 2, 0), [PALETTE.p0, PALETTE.p1, 0xffd166, 0x9b7bff, 0xffffff], 70, 1.6, { confetti: true, up: 7 });
   $('resultEmoji').textContent = win ? '🏆' : '😅';
@@ -567,6 +569,7 @@ function renderSettings() {
   $('verTxt').textContent = pkg.version;
   $('autoFsInput').checked = store.get('duo.autofs', '1') === '1';
   applyCtl();
+  syncGfx();
 }
 function openSettings() { openTab('settings'); }
 $('musicInput').onchange = (e) => { setMusicOn(e.target.checked); sfx.click(); };
@@ -603,6 +606,14 @@ $('fsBtn').onclick = () => { sfx.click(); isFS() ? exitFS() : enterFS(); };
 $('pFs').onclick = () => { sfx.click(); isFS() ? exitFS() : enterFS(); };
 // every "start a match" button also goes full screen on phones (it's a tap, so the browser allows it)
 ['botBtn', 'quickBtn', 'createBtn', 'joinBtn', 'botAny', 'quickAny', 'rematchBtn'].forEach((id) => $(id).addEventListener('click', maybeAutoFS, { capture: true }));
+
+// graphics preset (Settings): auto / low / medium / high
+const GFX_HINT = { auto: 'Adjusts itself to keep the game smooth on your device', low: 'Fastest — for older phones (no shadows)', med: 'Balanced look and speed', high: 'Sharpest picture and soft shadows — for strong devices' };
+function syncGfx() {
+  document.querySelectorAll('#gfxSeg button').forEach((b) => b.classList.toggle('on', b.dataset.gfx === stage.gfx));
+  $('gfxHint').textContent = t(`set.gfxHint.${stage.gfx}`, GFX_HINT[stage.gfx]);
+}
+document.querySelectorAll('#gfxSeg button').forEach((b) => (b.onclick = () => { if (GFX_LEVELS.includes(b.dataset.gfx)) stage.setGfx(b.dataset.gfx); syncGfx(); sfx.click(); }));
 
 // controls size (Settings): small / normal / large
 function applyCtl() { const v = store.get('duo.ctl', 'm'); document.body.classList.toggle('ctl-s', v === 's'); document.body.classList.toggle('ctl-l', v === 'l'); document.querySelectorAll('#ctlSeg button').forEach((b) => b.classList.toggle('on', b.dataset.ctl === v)); }
@@ -813,23 +824,20 @@ function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
   const tSec = now / 1000;
+  // movement input goes in before the match steps, so it shows up in this very frame
+  if (app.view?.pre && !app.paused) app.view.pre(now);
   if (app.local) { if (app.paused) app.local.last = null; else app.local.update(now); }
   if (app.view) {
     const latest = app.lastSnap ? { a: app.lastSnap, b: app.lastSnap, t: 1 } : null;
-    const sample = app.view.useLatest ? latest : (app.buffer.sample(now) || latest);
+    // on the device: the newest step blended with the one before (under a frame of delay);
+    // online: the smoothed playback clock of the snapshot buffer
+    const sample = app.view.useLatest ? latest : app.local ? (app.buffer.sampleTick(app.buffer.lastTick() - 1 + app.local.alpha()) || latest) : (app.buffer.sample(now) || latest);
     app.view.render(sample, dt, tSec);
     const ctrl = app.view.controls?.();
     if (ctrl) {
       const h = Math.round(ctrl.cooldown() * 100);
       if (h !== frame.cd) { frame.cd = h; actionFill.style.height = `${h}%`; }
     }
-  } else if (homeScene) {
-    stage.world.rotation.y = Math.sin(tSec * 0.15) * 0.35;
-    const k = Math.sin(tSec * 2.2);
-    homeScene.a.position.x = -1.05 + Math.max(0, k) * 0.25;
-    homeScene.b.position.x = 1.05 - Math.max(0, -k) * 0.25;
-    homeScene.a.children[0].scale.set(1 + k * 0.04, 1.08 - k * 0.05, 1 + k * 0.04);
-    homeScene.b.children[0].scale.set(1 - k * 0.04, 1.08 + k * 0.05, 1 - k * 0.04);
   }
   if (app.view || !document.body.classList.contains('menu')) stage.render(dt, tSec);
   requestAnimationFrame(frame);

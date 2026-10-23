@@ -132,7 +132,7 @@ export default class ParkingView {
     // steer is relative to the car: when the car points down the screen, flip left/right so it feels natural
     const key = `${st.toFixed(2)}|${th.toFixed(2)}`;
     if (key !== this.sent || now - this.lastSent > 300) {
-      if (now - this.lastSent > 33) { this.sent = key; this.lastSent = now; this.send({ t: 'i', th: +th.toFixed(2), st: +st.toFixed(2) }); }
+      if (now - this.lastSent > (this.online ? 33 : 0)) { this.sent = key; this.lastSent = now; this.send({ t: 'i', th: +th.toFixed(2), st: +st.toFixed(2) }); }
     }
   }
 

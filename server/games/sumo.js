@@ -5,6 +5,7 @@ const DAMPING = 2.4; // per second (exponential)
 const MAX_SPEED = 7.5;
 const DASH_IMPULSE = 12;
 const DASH_COOLDOWN = 1.6;
+const GRIP = 2.2;
 const BOUNCE = 1.35; // >1 = extra springy bumpers
 const SHRINK_AFTER = 12; // seconds into a round
 const SHRINK_TIME = 25;
@@ -86,6 +87,8 @@ export class SumoSim {
       }
       const damp = Math.exp(-DAMPING * dt);
       p.vx *= damp; p.vz *= damp;
+      // a little stick grip for sharper turns (letting go still slides: it's a slippery ring)
+      if (p.useDir && !(p.dashT > 0) && Math.hypot(p.jx, p.jz) > 0.2) { const g = 1 - Math.exp(-GRIP * dt); p.vx += (p.jx * MAX_SPEED - p.vx) * g; p.vz += (p.jz * MAX_SPEED - p.vz) * g; }
       const sp = Math.hypot(p.vx, p.vz);
       const cap = p.dashT > 0 ? MAX_SPEED * 2.2 : MAX_SPEED;
       if (sp > cap) { p.vx *= cap / sp; p.vz *= cap / sp; }

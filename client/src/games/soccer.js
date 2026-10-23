@@ -3,7 +3,7 @@ import { SOCCER as C } from '../../../shared/games.js';
 import { PALETTE, mat, roundedBox, makeIsland, makeBuddy, makeCrowd, trail, bake } from '../scene.js';
 import { sfx } from '../audio.js';
 import { t } from '../i18n.js';
-import { Steer, isTouch, lerp, clamp, angLerp, damp, makeNet } from './common.js';
+import { Steer, isTouch, lerp, clamp, angLerp, damp, makeNet, pumpInput } from './common.js';
 
 const PCOL = [PALETTE.p0, PALETTE.p1];
 
@@ -149,12 +149,12 @@ export default class SoccerView {
   controls() { return { label: t('btn.kick', 'KICK'), action: () => this.dash(), cooldown: () => this.cooldown }; }
   pan(x, z) { return this.stage.panAt({ x, y: 0, z }); }
 
+  pre(now) { if (this.steer.active) this.mode = 'dir'; pumpInput(this, now); }
+
   render(sample, dt) {
     this.time += dt;
     const T = this.time, fx = this.stage.fx;
-    if (this.steer.active) this.mode = 'dir';
     const now = performance.now();
-    if (now - this.lastSent > 33) { this.lastSent = now; this.send({ t: 'i', ...this.input() }); }
     this.marker.visible = this.mode === 'target' && this.active;
     if (this.marker.visible) { this.marker.position.x = this.target.x; this.marker.position.z = this.target.z; }
     if (!sample) return;
@@ -171,16 +171,13 @@ export default class SoccerView {
       const dashing = !!b.p[i][3];
       if (P.prev && dt > 0) { P.vx = damp(P.vx, (x - P.prev.x) / dt, 18, dt); P.vz = damp(P.vz, (z - P.prev.z) / dt, 18, dt); }
       P.prev = { x, z };
-      const sp = Math.hypot(P.vx, P.vz), run = Math.min(1, sp / 6);
+      const sp = Math.hypot(P.vx, P.vz);
       if (sp > 0.6) u.facing = angLerp(u.facing, Math.atan2(P.vx, P.vz), Math.min(1, dt * 12));
-      P.lean = damp(P.lean, dashing ? 0.4 : run * 0.2, 12, dt);
-      g.position.set(x, Math.abs(Math.sin(T * (8 + sp * 1.6) + i)) * 0.07 * run, z);
-      g.rotation.set(P.lean, u.facing, Math.sin(T * (8 + sp * 1.6) + i) * 0.06 * run);
-      u.body.scale.set(1 + run * 0.04, 1.08 - run * 0.06, 1 + run * 0.04);
-      // running feet + kicking foot
+      // (the run cycle, lean and wobble are animated by the character itself)
+      g.position.set(x, 0, z);
+      g.rotation.set(0, u.facing, 0);
       P.kick = Math.max(0, P.kick - dt * 5);
-      const R = C.playerR;
-      u.feet.forEach((f, j) => { f.position.z = R * 0.28 + Math.sin(T * (12 + sp * 2) + j * Math.PI) * 0.12 * run + (j === 1 ? Math.sin(P.kick * Math.PI) * 0.35 : 0); f.position.y = R * 0.1 + (j === 1 ? Math.sin(P.kick * Math.PI) * 0.15 : 0); });
+      u.kick = Math.sin(P.kick * Math.PI);
       u.squint = dashing ? 1 : 0;
       P.dust -= dt;
       if (sp > 5 && P.dust <= 0) { P.dust = dashing ? 0.04 : 0.18; fx.puff(new THREE.Vector3(x - P.vx * 0.05, 0.08, z - P.vz * 0.05), 0xd9efc4, 1, 0.3, { up: 0.3, size: dashing ? 0.6 : 0.4, life: 0.4 }); }

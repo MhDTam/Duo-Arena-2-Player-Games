@@ -101,6 +101,12 @@ export class LocalServer {
     this.post({ t: 'start', game: r.game, you: 0, countdown: COUNTDOWN, snap: this.snap(), local: 1 });
   }
 
+  // how far we are between the last step and the next one (0..1): the view blends the newest two steps
+  alpha() {
+    const r = this.room;
+    return r && (r.state === 'playing' || r.state === 'ending') ? Math.max(0, Math.min(1, this.acc / DT)) : 1;
+  }
+
   // called once per animation frame with the frame timestamp (ms); steps the game at a fixed 60 Hz
   update(nowMs) {
     if (!this.room) { this.last = null; this.acc = 0; return; }

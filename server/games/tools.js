@@ -9,7 +9,9 @@ import { mulberry, newSeed } from '../../shared/rng.js';
 // waves get longer and faster. First to 3 rounds.
 export const N = 3, STEP = C.tile + C.gap, HALF = (N * STEP) / 2;
 export const KINDS = 9;
-const ACCEL = 24, DAMP = 3.2, MAXV = 6.4, DASH = 10, DASH_CD = 1.5, R = 0.5;
+// movement: the stick sets the walking speed directly (quick to start, quick to stop: precise on a
+// phone); bumps and dashes add a separate knock-back speed that fades out on its own
+const STEER = 16, BRAKE = 20, KDAMP = 3.2, MAXV = 6.4, DASH = 10, DASH_CD = 1.5, R = 0.5;
 export const cellOf = (x, z) => { const c = Math.floor((x + HALF) / STEP), r = Math.floor((z + HALF) / STEP); return c < 0 || r < 0 || c >= N || r >= N ? -1 : r * N + c; };
 export const cellPos = (i) => [-HALF + STEP * ((i % N) + 0.5), -HALF + STEP * (Math.floor(i / N) + 0.5)];
 const onTile = (x, z) => { const i = cellOf(x, z); if (i < 0) return -1; const [cx, cz] = cellPos(i); return Math.abs(x - cx) <= C.tile / 2 + 0.25 && Math.abs(z - cz) <= C.tile / 2 + 0.25 ? i : -1; };
@@ -38,7 +40,7 @@ export class ToolsSim {
 
   newRound() {
     this.round++;
-    this.p = [0, 1].map((s) => ({ x: s === 0 ? -1.4 : 1.4, z: s === 0 ? 1.4 : -1.4, vx: 0, vz: 0, jx: 0, jz: 0, cd: 0, y: 0, vy: 0, fall: 0, dashT: 0 }));
+    this.p = [0, 1].map((s) => ({ x: s === 0 ? -1.4 : 1.4, z: s === 0 ? 1.4 : -1.4, vx: 0, vz: 0, wx: 0, wz: 0, kx: 0, kz: 0, jx: 0, jz: 0, cd: 0, y: 0, vy: 0, fall: 0, dashT: 0 }));
     this.wave = -1; this.rw = -1; this.phase = 'play'; this.pause = 1.4;
     this.events.push({ e: 'round', n: this.round });
     this.nextWave();
@@ -83,7 +85,7 @@ export class ToolsSim {
     if (m.dash && p.cd <= 0 && !p.fall && this.phase === 'play' && this.pause <= 0) {
       let dx = p.jx, dz = p.jz, d = Math.hypot(dx, dz);
       if (d < 0.2) { const o = this.p[1 - slot]; dx = o.x - p.x; dz = o.z - p.z; d = Math.hypot(dx, dz) || 1; }
-      p.vx += (dx / d) * DASH; p.vz += (dz / d) * DASH; p.cd = DASH_CD; p.dashT = 0.3;
+      p.kx += (dx / d) * DASH; p.kz += (dz / d) * DASH; p.cd = DASH_CD; p.dashT = 0.3;
       this.events.push({ e: 'dash', slot });
     }
   }
@@ -120,11 +122,14 @@ export class ToolsSim {
     for (const p of this.p) {
       p.cd = Math.max(0, p.cd - dt); p.dashT = Math.max(0, p.dashT - dt);
       if (p.fall) continue;
-      p.vx += p.jx * ACCEL * dt; p.vz += p.jz * ACCEL * dt;
-      const k = Math.exp(-DAMP * dt); p.vx *= k; p.vz *= k;
-      const sp = Math.hypot(p.vx, p.vz), lim = p.dashT > 0 ? MAXV * 2.2 : MAXV;
-      if (sp > lim) { p.vx *= lim / sp; p.vz *= lim / sp; }
-      p.x += p.vx * dt; p.z += p.vz * dt;
+      const ks = 1 - Math.exp(-((p.jx || p.jz) ? STEER : BRAKE) * dt);
+      p.wx += (p.jx * MAXV - p.wx) * ks; p.wz += (p.jz * MAXV - p.wz) * ks;
+      const kd = Math.exp(-KDAMP * dt); p.kx *= kd; p.kz *= kd;
+      let vx = p.wx + p.kx, vz = p.wz + p.kz;
+      const sp = Math.hypot(vx, vz), lim = p.dashT > 0 ? MAXV * 2.2 : MAXV;
+      if (sp > lim) { vx *= lim / sp; vz *= lim / sp; p.kx = vx - p.wx; p.kz = vz - p.wz; }
+      p.vx = vx; p.vz = vz;
+      p.x += vx * dt; p.z += vz * dt;
     }
     if (!a.fall && !b.fall) {
       const dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz);
@@ -135,7 +140,7 @@ export class ToolsSim {
         if (vn < 0) {
           const j = -vn * 1.25 + (a.dashT > 0 || b.dashT > 0 ? 4 : 0.6);
           const wa = a.dashT > 0 && !(b.dashT > 0) ? 0.25 : b.dashT > 0 && !(a.dashT > 0) ? 1.75 : 1;
-          a.vx -= nx * j * wa * 0.5; a.vz -= nz * j * wa * 0.5; b.vx += nx * j * (2 - wa) * 0.5; b.vz += nz * j * (2 - wa) * 0.5;
+          a.kx -= nx * j * wa * 0.5; a.kz -= nz * j * wa * 0.5; b.kx += nx * j * (2 - wa) * 0.5; b.kz += nz * j * (2 - wa) * 0.5;
           if ((-vn > 1.5 || a.dashT > 0 || b.dashT > 0) && !(this.bumpCd > 0)) { this.bumpCd = 0.25; this.events.push({ e: 'bump', x: Math.round((a.x + b.x) * 50) / 100, z: Math.round((a.z + b.z) * 50) / 100, hard: a.dashT > 0 || b.dashT > 0 ? 1 : 0 }); }
         }
       }

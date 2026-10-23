@@ -15,10 +15,11 @@ const R = 0.62;
 function makeBoxer(color) {
   const b = makeBuddy(color, undefined, R);
   const gm = () => new THREE.MeshStandardMaterial({ color: 0xe03131, roughness: 0.35, emissive: 0xffd43b, emissiveIntensity: 0 });
-  const gloves = ['L', 'R'].map(() => { const g = new THREE.Mesh(new THREE.SphereGeometry(0.24, 18, 14), gm()); g.scale.set(1, 1, 1.25); g.castShadow = true; b.add(g); return g; });
+  const gloves = ['L', 'R'].map(() => { const g = new THREE.Mesh(new THREE.SphereGeometry(0.24, 18, 14), gm()); g.scale.set(1, 1, 1.25); g.castShadow = true; b.userData.torso.add(g); return g; });
   // trunks
-  const tr = new THREE.Mesh(new THREE.CylinderGeometry(R * 0.98, R * 0.9, 0.35, 24), mat(0xffffff)); tr.position.y = R * 0.45; b.add(tr);
+  const tr = new THREE.Mesh(new THREE.CylinderGeometry(R * 0.98, R * 0.9, 0.35, 24), mat(0xffffff)); tr.position.y = R * 0.45; b.userData.torso.add(tr);
   b.userData.gloves = gloves; b.userData.trunks = tr;
+  b.userData.arms.forEach((a) => { a.visible = false; }); // the gloves are the hands
   return b;
 }
 

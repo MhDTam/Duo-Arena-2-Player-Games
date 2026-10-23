@@ -53,8 +53,8 @@ export default class PenaltyView {
     this.crowd.group.position.set(0, 0, GZ - 2.8);
     w.add(this.crowd.group);
 
-    this.keeper = makeBuddy(PCOL[1], 0x2b2d42, 0.62); w.add(this.keeper);
-    this.gloves = [-1, 1].map((s) => { const g = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 10), mat(0xffffff, { roughness: 0.5 })); g.position.set(s * 0.72, 0.95, 0.1); this.keeper.add(g); return g; });
+    this.keeper = makeBuddy(PCOL[1], 0x2b2d42, 0.62); this.keeper.userData.armsUp = 1; w.add(this.keeper);
+    this.gloves = [-1, 1].map((s) => { const g = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 10), mat(0xffffff, { roughness: 0.5 })); g.position.set(s * 0.72, 0.95, 0.1); this.keeper.userData.torso.add(g); return g; });
     this.kicker = makeBuddy(PCOL[0], 0x2b2d42, 0.55); w.add(this.kicker);
     this.ball = makeBall(); w.add(this.ball);
     this.ballTrail = trail(stage, 0xffffff, { min: 5, size: 1, every: 0.012 });
@@ -89,7 +89,7 @@ export default class PenaltyView {
     this.keeper.rotation.set(0, 0, 0);
     this.kicker.position.set(-1.3, 0, SPOT.z + 0.7);
     this.kicker.rotation.set(0, Math.PI - 0.7, 0);
-    this.kicker.userData.feet[1].position.z = 0.55 * 0.28;
+    this.kicker.userData.kick = 0;
   }
 
   pointer(type, ev) {
@@ -153,7 +153,7 @@ export default class PenaltyView {
       const run = ease(T / 0.35);
       this.kicker.position.set(-1.3 + 0.85 * run, 0, SPOT.z + 0.7 - 0.35 * run);
       const kf = clamp((T - 0.28) / 0.15, 0, 1);
-      this.kicker.userData.feet[1].position.z = 0.55 * 0.28 + Math.sin(kf * Math.PI) * 0.35;
+      this.kicker.userData.kick = Math.sin(kf * Math.PI);
       // keeper dive (stretched out)
       const kd = ease((T - 0.3) / 0.4);
       this.keeper.position.set(r.kx * kd, Math.max(0, (r.ky - 0.6) * kd), GZ + 0.35);

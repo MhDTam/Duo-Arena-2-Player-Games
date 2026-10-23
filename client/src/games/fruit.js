@@ -4,7 +4,7 @@ import { sfx } from '../audio.js';
 import { t } from '../i18n.js';
 import { FRUIT as C } from '../../../shared/games.js';
 import { canvasTex, FONT } from './kit8.js';
-import { Steer, isTouch, lerp, clamp, angLerp, damp } from './common.js';
+import { Steer, isTouch, lerp, clamp, angLerp, damp, pumpInput } from './common.js';
 import { fruitTexture, FRUIT_EN, FRUIT_EMO } from './fruitart.js';
 
 // Fruit Match view: a floating 5×5 floor of tiles, a big sign that calls the fruit, two buddies.
@@ -66,11 +66,12 @@ export default class FruitView {
   dash() { this.send({ t: 'i', ...this.input(), dash: 1 }); }
   controls() { return { label: t('btn.push', 'PUSH 💨'), action: () => this.dash(), cooldown: () => this.cooldown }; }
 
+  pre(now) { pumpInput(this, now); }
+
   render(sample, dt) {
     this.time += dt;
     if ((window.innerHeight > window.innerWidth) !== this.port) this.layout();
     const now = performance.now();
-    if (now - this.lastSent > 33) { this.lastSent = now; this.send({ t: 'i', ...this.input() }); }
     const s = sample?.b; if (!s) return;
     this.last = s;
     if (s.tl) { if (!this.known) this.known = s.tl.map((f) => Math.max(0, f)); s.tl.forEach((f, i) => { if (f >= 0) this.known[i] = f; }); }
@@ -106,8 +107,9 @@ export default class FruitView {
       const sp = Math.hypot(B.vx, B.vz);
       if (sp > 0.5) B.face = angLerp(B.face, Math.atan2(B.vx, B.vz), Math.min(1, dt * 10));
       B.b.rotation.y = B.face;
-      B.b.rotation.x = P[4] ? 0.35 : Math.min(0.2, sp * 0.03);
-      B.b.position.set(x, y + (sp > 0.6 && y > -0.01 ? Math.abs(Math.sin(this.time * 14 + i)) * 0.12 : 0), z);
+      // (running, leaning and wobbling are animated by the character itself)
+      B.b.position.set(x, y, z);
+      B.b.userData.squint = P[4] ? 1 : 0;
       if (y < -0.1) B.b.rotation.z += dt * 6;
       else B.b.rotation.z = 0;
     });

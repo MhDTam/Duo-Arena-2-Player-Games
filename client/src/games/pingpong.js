@@ -91,7 +91,7 @@ export default class PingPongView {
   render(sample, dt) {
     this.time += dt;
     const now = performance.now();
-    if (now - this.lastSent > 16) { this.lastSent = now; this.send({ t: 'i', x: +this.tx.toFixed(3) }); }
+    if (now - this.lastSent > (this.online ? 16 : 0)) { this.lastSent = now; this.send({ t: 'i', x: +this.tx.toFixed(3) }); }
     const d = this.tx - this.mine, mv = 14 * dt;
     this.mine += Math.abs(d) > mv ? Math.sign(d) * mv : d;
     this.mine = clamp(this.mine, -this.hw + C.padW / 2 - 0.3, this.hw - C.padW / 2 + 0.3);

@@ -148,7 +148,7 @@ export default class VolleyView {
     const me = this.crabs[this.slot].position.x;
     if (d.mag > 0) { this.tx = me + (this.slot === 0 ? d.x : -d.x) * 1.4; this.steering = true; }
     else if (this.steering) { this.tx = me; this.steering = false; }
-    if (performance.now() - this.lastSent > 33) { this.lastSent = performance.now(); this.send({ t: 'i', x: +this.tx.toFixed(2) }); }
+    if (performance.now() - this.lastSent > (this.online ? 33 : 0)) { this.lastSent = performance.now(); this.send({ t: 'i', x: +this.tx.toFixed(2) }); }
     if (!sample) return;
     const { a, b, t: k } = sample;
     const jump = Math.abs(b.b[0] - a.b[0]) > 2.5;

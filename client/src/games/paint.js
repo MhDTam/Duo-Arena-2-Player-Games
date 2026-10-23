@@ -3,7 +3,7 @@ import { PALETTE, mat, roundedBox, makeBuddy } from '../scene.js';
 import { sfx } from '../audio.js';
 import { t } from '../i18n.js';
 import { PAINT as C } from '../../../shared/games.js';
-import { Steer, isTouch, lerp, angLerp, damp } from './common.js';
+import { Steer, isTouch, lerp, angLerp, damp, pumpInput } from './common.js';
 import { panel } from './kit8.js';
 
 const KINDS = ['bomb', 'rocket', 'freeze', 'speed', 'wide', 'trap'];
@@ -50,7 +50,7 @@ export default class PaintView {
     for (let i = 0; i < C.n * C.n; i++) { m4.makeTranslation(-HALF + C.cell * ((i % C.n) + 0.5), 0.0, -HALF + C.cell * (Math.floor(i / C.n) + 0.5)); this.tiles.setMatrixAt(i, m4); this.tiles.setColorAt(i, BLANK); }
     this.tiles.receiveShadow = true; w.add(this.tiles);
     this.grid = '';
-    this.pl = PCOL.map((c, i) => { const b = makeBuddy(c, undefined, 0.4); const r = makeRoller(c); b.add(r); w.add(b); return { b, r, face: i ? Math.PI : 0, x: 0, z: 0 }; });
+    this.pl = PCOL.map((c, i) => { const b = makeBuddy(c, undefined, 0.4); b.userData.push = 0.6; const r = makeRoller(c); b.add(r); w.add(b); return { b, r, face: i ? Math.PI : 0, x: 0, z: 0 }; });
     this.pus = new Map();
     this.trapM = new Map();
     // ice blocks for frozen painters
@@ -70,10 +70,11 @@ export default class PaintView {
   dash() { this.send({ t: 'i', ...this.input(), dash: 1 }); }
   controls() { return { label: t('btn.dash', 'DASH'), action: () => this.dash(), cooldown: () => this.cooldown }; }
 
+  pre(now) { pumpInput(this, now); }
+
   render(sample, dt) {
     this.time += dt;
     const now = performance.now();
-    if (now - this.lastSent > 33) { this.lastSent = now; this.send({ t: 'i', ...this.input() }); }
     const s = sample?.b; if (!s) return;
     this.last = s;
     // floor colours (only the cells that changed)
@@ -95,7 +96,7 @@ export default class PaintView {
       const vx = (x - P.x) / Math.max(dt, 1e-3), vz = (z - P.z) / Math.max(dt, 1e-3), sp = Math.hypot(vx, vz);
       if (sp > 0.4) P.face = angLerp(P.face, Math.atan2(vx, vz), Math.min(1, dt * 12));
       P.x = x; P.z = z;
-      P.b.position.set(x, sp > 0.5 ? Math.abs(Math.sin(this.time * 15 + i)) * 0.06 : 0, z);
+      P.b.position.set(x, 0, z);
       P.b.rotation.y = P.face;
       P.r.userData.roll.rotation.x += sp * dt * 6;
       P.r.scale.x = damp(P.r.scale.x, B[4] ? 2.2 : 1, 10, dt);
