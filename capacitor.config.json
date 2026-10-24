@@ -1,5 +1,5 @@
 {
-  "appId": "com.alialrikabi.duoarena",
+  "appId": "com.mhdtam.duoarena",
   "appName": "Duo Arena",
   "webDir": "client/dist",
   "android": { "allowMixedContent": true },

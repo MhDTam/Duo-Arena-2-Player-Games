@@ -1,4 +1,4 @@
-package com.alialrikabi.duoarena;
+package com.mhdtam.duoarena;
 
 import android.os.Bundle;
 import android.view.WindowManager;
