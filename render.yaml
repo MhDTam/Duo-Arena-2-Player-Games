@@ -1,7 +1,7 @@
 # Render Blueprint — free web service (sleeps after 15 min idle, wakes in ~1 min)
 services:
   - type: web
-    name: duo-arena-ali313
+    name: duo-arena-2-player-games
     runtime: node
     plan: free
     region: frankfurt

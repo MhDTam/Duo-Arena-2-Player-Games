@@ -7,13 +7,13 @@
   
   <br />
 
-  <a href="https://duo-arena-ali313.onrender.com">
+  <a href="https://duo-arena-2-player-games.onrender.com/">
     <img src="https://img.shields.io/badge/🎮%20Play%20Online%20Now-العب%20الآن%20أونلاين-00C853?style=for-the-badge&logoColor=white" height="45" alt="Play Online Now" />
   </a>
 
   <br /><br />
   <p>🌐 <b>رابط اللعبة المباشر للتجربة:</b><br />
-  <a href="https://duo-arena-ali313.onrender.com">https://duo-arena-ali313.onrender.com</a></p>
+  <a href="https://duo-arena-2-player-games.onrender.com/">https://duo-arena-2-player-games.onrender.com/</a></p>
 </div>
 
 ---

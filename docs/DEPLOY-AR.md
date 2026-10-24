@@ -11,13 +11,13 @@
 1. ادخل https://render.com وسجّل بحساب GitHub.
 2. **New → Blueprint** → اختار الـ repo مالتك → Render يقرا ملف `render.yaml` لحاله.
 3. اضغط **Apply**. البناء ياخذ 2–4 دقائق.
-4. الرابط راح يكون: `https://duo-arena-ali313.onrender.com`
+4. الرابط راح يكون: `https://duo-arena-2-player-games.onrender.com`
    - افتحه بالمتصفح: لازم تطلع اللعبة. و `…/health` يرجع `{"ok":true}`.
    - إذا Render عطاك اسم ثاني، غيّر الرابط بملف `client/src/config.js` وبلّغني حتى أبني APK جديد (أو اكتبه من ⚙️ داخل التطبيق).
 
 ## 3) (اختياري) خلّيه صاحي دائماً — مجاناً
 - سجّل بـ https://uptimerobot.com → Add New Monitor → HTTP(s)
-- URL: `https://duo-arena-ali313.onrender.com/health` — كل 5 دقائق.
+- URL: `https://duo-arena-2-player-games.onrender.com/health` — كل 5 دقائق.
 - هيچ السيرفر ما ينام (الـ 750 ساعة المجانية بالشهر تكفي خدمة وحدة 24/7).
 
 ## 4) التطبيق
