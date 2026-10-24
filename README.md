@@ -77,3 +77,9 @@ DOMAIN=play.example.com docker compose up -d --build
 Point the domain's A record to the VPS first. Players then use `https://play.example.com` (web) and the app uses `wss://play.example.com/ws`.
 Without Docker: `npm ci && npm run build`, copy `deploy/duo-arena.service` to systemd, and put Caddy/Nginx in front for HTTPS.
 Pick a region close to Iraq (Frankfurt / Istanbul / Bahrain) for ~50–90 ms ping. Health check: `GET /health`.
+
+## Copyright & License
+Copyright © 2026 **MhDTam**. All rights reserved.  
+جميع الحقوق محفوظة للمطور **MhDTam**.  
+This project, including its source code, assets, and game simulations, is proprietary and private. Unauthorized copying, modification, redistribution, or commercial use is strictly prohibited.
+

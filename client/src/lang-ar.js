@@ -478,7 +478,7 @@ export const AR = {
   'lobby.bot': 'لعبة عشوائية ضد البوت', 'lobby.botSub': 'ادخل للمباراة فوراً', 'lobby.new': 'ألعاب جديدة', 'lobby.all': 'كل الألعاب', 'lobby.popular': 'الأكثر لعباً',
   'lobby.cats': 'التصنيفات', 'lobby.allTitle': 'كل الألعاب', 'lobby.search': 'دوّر على لعبة…', 'lobby.none': 'ماكو ألعاب تطابق البحث.', 'lobby.play': 'العب',
   'lobby.count': '{n} لعبة', 'lobby.pickFriend': 'اختار لعبة، وبعدين «العب ويا صديق»',
-  'prof.title': 'الملف الشخصي', 'prof.lvl': 'مستوى {n}', 'set.gSound': 'الصوت', 'set.gLang': 'اللغة', 'set.version': 'الإصدار', 'set.savedOk': 'انحفظ ✓',
+  'prof.title': 'الملف الشخصي', 'prof.lvl': 'مستوى {n}', 'set.gSound': 'الصوت', 'set.gLang': 'اللغة', 'set.version': 'الإصدار', 'set.credits': 'تطوير: MhDTam · جميع الحقوق محفوظة', 'set.savedOk': 'انحفظ ✓',
   'tab.home': 'الرئيسية', 'tab.games': 'الألعاب', 'tab.profile': 'ملفي', 'tab.settings': 'الإعدادات',
   'sheet.quick2': 'لعب سريع', 'sheet.friend2': 'العب ويا صديق', 'sheet.bot2': 'العب ضد البوت', 'sheet.players': 'لاعبَين',
   'wait.game': 'اللعبة', 'wait.who': '…',
